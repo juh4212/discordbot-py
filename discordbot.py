@@ -146,11 +146,10 @@ async def show_inventory(interaction: discord.Interaction):
         cash_price = prices_info["현금 시세"]
         embed3.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
 
-    # 임베드 메시지를 개별로 디스코드에 전송
-    await interaction.response.send_message(embed=embed1)
-    await interaction.response.send_message(embed=embed2)
-    await interaction.response.send_message(embed=embed3)
+    # 임베드 메시지를 디스코드에 전송
+    await interaction.response.send_message(embeds=[embed1, embed2, embed3])
 
 # 봇 실행
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 bot.run(TOKEN)
+
