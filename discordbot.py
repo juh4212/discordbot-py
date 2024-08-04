@@ -4,12 +4,8 @@ from discord import app_commands
 import json
 import os
 
-# 환경 변수에서 BASE_DIR 가져오기
-BASE_DIR = os.getenv('BASE_DIR', '/app/data')
-
-# 인벤토리와 가격 파일의 절대 경로 설정
-inventory_file = os.path.join(BASE_DIR, 'inventory.json')
-prices_file = os.path.join(BASE_DIR, 'prices.json')
+# 환경 변수에서 토큰 가져오기
+TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 
 # 인텐트 설정
 intents = discord.Intents.default()
@@ -28,6 +24,15 @@ prices = {item: {"슘 시세": 0, "현금 시세": 0} for item in creatures + it
 # 재고 저장소 초기화
 inventory = {item: 0 for item in creatures + items}
 
+# 절대 경로 설정 및 디렉토리 생성
+data_directory = "/app/data"
+if not os.path.exists(data_directory):
+    os.makedirs(data_directory)
+
+# 재고 파일 경로 (절대 경로 사용)
+inventory_file = os.path.join(data_directory, "inventory.json")
+prices_file = os.path.join(data_directory, "prices.json")
+
 def load_inventory():
     """재고를 JSON 파일에서 불러옵니다."""
     if os.path.exists(inventory_file):
@@ -38,7 +43,8 @@ def load_inventory():
                     loaded_inventory[item] = 0
             return loaded_inventory
     else:
-        return {item: 0 for item in creatures + items}
+        save_inventory()  # 파일이 없으면 기본 재고 정보를 저장
+        return inventory
 
 def save_inventory():
     """재고를 JSON 파일에 저장합니다."""
@@ -51,7 +57,8 @@ def load_prices():
         with open(prices_file, "r") as f:
             return json.load(f)
     else:
-        return {item: {"슘 시세": 0, "현금 시세": 0} for item in creatures + items}
+        save_prices()  # 파일이 없으면 기본 시세 정보를 저장
+        return prices
 
 def save_prices():
     """시세를 JSON 파일에 저장합니다."""
@@ -64,11 +71,7 @@ async def on_ready():
     inventory = load_inventory()
     prices = load_prices()
     print(f'Logged in as {bot.user.name}')
-    try:
-        synced = await bot.tree.sync()
-        print(f'Synced {len(synced)} commands.')
-    except Exception as e:
-        print(f'Failed to sync commands: {e}')
+    await bot.tree.sync()  # 슬래시 커맨드를 디스코드와 동기화합니다.
 
 # 자동 완성 함수
 async def autocomplete_item(interaction: discord.Interaction, current: str):
@@ -84,7 +87,6 @@ async def autocomplete_item(interaction: discord.Interaction, current: str):
 @app_commands.autocomplete(item=autocomplete_item)
 async def add_item(interaction: discord.Interaction, item: str, quantity: int):
     """고정된 아이템 목록에 아이템을 추가합니다."""
-    global inventory
     if item in inventory:
         inventory[item] += quantity
         save_inventory()
@@ -98,7 +100,6 @@ async def add_item(interaction: discord.Interaction, item: str, quantity: int):
 @app_commands.autocomplete(item=autocomplete_item)
 async def remove_item(interaction: discord.Interaction, item: str, quantity: int):
     """고정된 아이템 목록에서 아이템을 제거합니다."""
-    global inventory
     if item in inventory:
         if inventory[item] >= quantity:
             inventory[item] -= quantity
@@ -115,7 +116,6 @@ async def remove_item(interaction: discord.Interaction, item: str, quantity: int
 @app_commands.autocomplete(item=autocomplete_item)
 async def update_price(interaction: discord.Interaction, item: str, shoom_price: int):
     """아이템의 시세를 업데이트합니다."""
-    global prices
     if item in prices:
         prices[item]["슘 시세"] = shoom_price
         prices[item]["현금 시세"] = shoom_price * 0.7
@@ -124,25 +124,10 @@ async def update_price(interaction: discord.Interaction, item: str, shoom_price:
     else:
         await interaction.response.send_message(f'아이템 "{item}"은(는) 사용할 수 없는 아이템입니다.')
 
-# 슬래시 커맨드: 시세 확인
-@bot.tree.command(name='price', description='Check the price of an item.')
-@app_commands.describe(item='The item to check the price for')
-@app_commands.autocomplete(item=autocomplete_item)
-async def check_price(interaction: discord.Interaction, item: str):
-    """아이템의 시세를 확인합니다."""
-    global prices
-    if item in prices:
-        shoom_price = prices[item]["슘 시세"]
-        cash_price = prices[item]["현금 시세"]
-        await interaction.response.send_message(f'아이템 "{item}"의 시세는 다음과 같습니다:\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원')
-    else:
-        await interaction.response.send_message(f'아이템 "{item}"은(는) 사용할 수 없는 아이템입니다.')
-
 # 슬래시 커맨드: 현재 재고 확인
 @bot.tree.command(name='inventory', description='Show the current inventory with prices.')
 async def show_inventory(interaction: discord.Interaction):
     """현재 재고를 카테고리별로 임베드 형태로 표시합니다."""
-    global inventory, prices
     embed1 = discord.Embed(title="현재 재고 목록 (Creatures Part 1)", color=discord.Color.blue())
     embed2 = discord.Embed(title="현재 재고 목록 (Creatures Part 2)", color=discord.Color.blue())
     embed3 = discord.Embed(title="현재 재고 목록 (Items)", color=discord.Color.green())
@@ -175,11 +160,6 @@ async def show_inventory(interaction: discord.Interaction):
     await interaction.response.send_message(embeds=[embed1, embed2, embed3])
 
 # 봇 실행
-TOKEN = os.getenv('DISCORD_BOT_TOKEN')
-if TOKEN:
-    bot.run(TOKEN)
-else:
-    print("DISCORD_BOT_TOKEN 환경 변수를 설정하세요.")
-
+bot.run(TOKEN)
 
 
