@@ -3,9 +3,9 @@ async-timeout==3.0.1
 attrs==21.4.0
 chardet==4.0.0
 py-cord==2.3.2
-python-dotenv==0.21.0
 idna==3.3
 multidict==6.0.2
 typing_extensions==4.3.0
 yarl==1.7.2
-
+discord.py==2.3.2
+python-dotenv==1.0.0
