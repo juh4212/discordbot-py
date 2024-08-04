@@ -20,7 +20,7 @@ items = ["death gacha token", "revive token", "max growth token", "partial growt
 prices = {item: {"슘 시세": "N/A", "현금 시세": "N/A"} for item in creatures + items}
 
 # 재고 저장소 초기화
-inventory = {item: 0 for item in creatures + items}
+inventory = {item: "N/A" for item in creatures + items}
 
 # 재고 파일 경로
 inventory_file = "/app/data/inventory.json"
@@ -33,10 +33,10 @@ def load_inventory():
             loaded_inventory = json.load(f)
             for item in creatures + items:
                 if item not in loaded_inventory:
-                    loaded_inventory[item] = 0
+                    loaded_inventory[item] = "N/A"
             return loaded_inventory
     else:
-        return {item: 0 for item in creatures + items}
+        return {item: "N/A" for item in creatures + items}
 
 def save_inventory():
     """재고를 JSON 파일에 저장합니다."""
@@ -79,7 +79,10 @@ async def autocomplete_item(interaction: discord.Interaction, current: str):
 async def add_item(interaction: discord.Interaction, item: str, quantity: int):
     """고정된 아이템 목록에 아이템을 추가합니다."""
     if item in inventory:
-        inventory[item] += quantity
+        if inventory[item] == "N/A":
+            inventory[item] = quantity
+        else:
+            inventory[item] += quantity
         save_inventory()
         await interaction.response.send_message(f'아이템 "{item}"이(가) {quantity}개 추가되었습니다.')
     else:
@@ -92,8 +95,12 @@ async def add_item(interaction: discord.Interaction, item: str, quantity: int):
 async def remove_item(interaction: discord.Interaction, item: str, quantity: int):
     """고정된 아이템 목록에서 아이템을 제거합니다."""
     if item in inventory:
-        if inventory[item] >= quantity:
+        if inventory[item] == "N/A":
+            await interaction.response.send_message(f'아이템 "{item}"은(는) 재고가 없습니다.')
+        elif inventory[item] >= quantity:
             inventory[item] -= quantity
+            if inventory[item] == 0:
+                inventory[item] = "N/A"
             save_inventory()
             await interaction.response.send_message(f'아이템 "{item}"이(가) {quantity}개 제거되었습니다.')
         else:
@@ -125,7 +132,7 @@ async def show_inventory(interaction: discord.Interaction):
 
     # Creatures 목록 추가 (첫 번째 임베드)
     for item in creatures[:len(creatures)//2]:
-        quantity = inventory.get(item, 0)
+        quantity = inventory.get(item, "N/A")
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
         shoom_price = prices_info["슘 시세"]
         cash_price = prices_info["현금 시세"]
@@ -133,7 +140,7 @@ async def show_inventory(interaction: discord.Interaction):
 
     # Creatures 목록 추가 (두 번째 임베드)
     for item in creatures[len(creatures)//2:]:
-        quantity = inventory.get(item, 0)
+        quantity = inventory.get(item, "N/A")
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
         shoom_price = prices_info["슘 시세"]
         cash_price = prices_info["현금 시세"]
@@ -141,7 +148,7 @@ async def show_inventory(interaction: discord.Interaction):
 
     # Items 목록 추가 (세 번째 임베드)
     for item in items:
-        quantity = inventory.get(item, 0)
+        quantity = inventory.get(item, "N/A")
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
         shoom_price = prices_info["슘 시세"]
         cash_price = prices_info["현금 시세"]
@@ -153,4 +160,5 @@ async def show_inventory(interaction: discord.Interaction):
 # 봇 실행
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 bot.run(TOKEN)
+
 
