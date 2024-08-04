@@ -13,15 +13,15 @@ if not os.path.exists(data_directory):
 inventory_file = os.path.join(data_directory, "inventory.json")
 prices_file = os.path.join(data_directory, "prices.json")
 
-# inventory.json 파일이 존재하지 않으면 생성
-if not os.path.exists(inventory_file):
-    with open(inventory_file, 'w') as f:
-        json.dump({}, f)
+# JSON 파일 초기화 함수
+def initialize_file(file_path, default_data):
+    if not os.path.exists(file_path):
+        with open(file_path, 'w') as f:
+            json.dump(default_data, f)
 
-# prices.json 파일이 존재하지 않으면 생성
-if not os.path.exists(prices_file):
-    with open(prices_file, 'w') as f:
-        json.dump({}, f)
+# inventory.json 및 prices.json 파일 초기화
+initialize_file(inventory_file, {})
+initialize_file(prices_file, {})
 
 # 인텐트 설정
 intents = discord.Intents.default()
@@ -34,49 +34,35 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 creatures = ["angelic warden", "aolenus", "ardor warden", "boreal warden", "corsarlett", "caldonterrus", "eigion warden", "ghartokus", "golgaroth", "hellion warden", "jhiggo jangl", "jotunhel", "luxces", "lus adarch", "menace", "magnacetus", "mijusuima", "nolumoth", "pacedegon", "parahexilian", "sang toare", "takamorath", "urzuk", "umbraxi", "verdent warden", "whispthera", "woodralone"]
 items = ["death gacha token", "revive token", "max growth token", "partial growth token", "strong glimmer token", "appearance change token"]
 
-# 시세 정보 초기화
+# 시세 및 재고 초기화
 prices = {item: {"슘 시세": 0, "현금 시세": 0} for item in creatures + items}
-
-# 재고 저장소 초기화
 inventory = {item: 0 for item in creatures + items}
 
-def load_inventory():
-    """재고를 JSON 파일에서 불러옵니다."""
-    if os.path.exists(inventory_file):
-        with open(inventory_file, "r") as f:
-            loaded_inventory = json.load(f)
-            for item in creatures + items:
-                if item not in loaded_inventory:
-                    loaded_inventory[item] = 0
-            return loaded_inventory
-    else:
-        return {item: 0 for item in creatures + items}
-
-def save_inventory():
-    """재고를 JSON 파일에 저장합니다."""
-    with open(inventory_file, "w") as f:
-        json.dump(inventory, f)
-
-def load_prices():
-    """시세를 JSON 파일에서 불러옵니다."""
-    if os.path.exists(prices_file):
-        with open(prices_file, "r") as f:
+# JSON 파일에서 데이터를 불러오는 함수
+def load_data(file_path, default_data):
+    if os.path.exists(file_path):
+        with open(file_path, "r") as f:
             return json.load(f)
     else:
-        return {item: {"슘 시세": 0, "현금 시세": 0} for item in creatures + items}
+        return default_data
 
-def save_prices():
-    """시세를 JSON 파일에 저장합니다."""
-    with open(prices_file, "w") as f:
-        json.dump(prices, f)
+# JSON 파일에 데이터를 저장하는 함수
+def save_data(file_path, data):
+    with open(file_path, "w") as f:
+        json.dump(data, f)
 
+# 봇 준비 이벤트 핸들러
 @bot.event
 async def on_ready():
     global inventory, prices
-    inventory = load_inventory()
-    prices = load_prices()
+    inventory = load_data(inventory_file, inventory)
+    prices = load_data(prices_file, prices)
     print(f'Logged in as {bot.user.name}')
-    await bot.tree.sync()  # 슬래시 커맨드를 디스코드와 동기화합니다.
+    try:
+        synced = await bot.tree.sync()
+        print(f"Synced {len(synced)} command(s)")
+    except Exception as e:
+        print(f"Failed to sync commands: {e}")
 
 # 자동 완성 함수
 async def autocomplete_item(interaction: discord.Interaction, current: str):
@@ -94,10 +80,10 @@ async def add_item(interaction: discord.Interaction, item: str, quantity: int):
     """고정된 아이템 목록에 아이템을 추가합니다."""
     if item in inventory:
         inventory[item] += quantity
-        save_inventory()
+        save_data(inventory_file, inventory)
         await interaction.response.send_message(f'아이템 "{item}"이(가) {quantity}개 추가되었습니다.')
     else:
-        await interaction.response.send_message(f'아이템 "{item}"은(는) 사용할 수 없는 아이템입니다.')
+        await interaction.response.send_message(f'아이템 "{item}"은(는) 사용할 수 없는 아이템입니다.', ephemeral=True)
 
 # 슬래시 커맨드: 아이템 제거
 @bot.tree.command(name='remove', description='Remove items from the inventory.')
@@ -108,12 +94,12 @@ async def remove_item(interaction: discord.Interaction, item: str, quantity: int
     if item in inventory:
         if inventory[item] >= quantity:
             inventory[item] -= quantity
-            save_inventory()
+            save_data(inventory_file, inventory)
             await interaction.response.send_message(f'아이템 "{item}"이(가) {quantity}개 제거되었습니다.')
         else:
-            await interaction.response.send_message(f'아이템 "{item}"의 재고가 부족합니다.')
+            await interaction.response.send_message(f'아이템 "{item}"의 재고가 부족합니다.', ephemeral=True)
     else:
-        await interaction.response.send_message(f'아이템 "{item}"은(는) 사용할 수 없는 아이템입니다.')
+        await interaction.response.send_message(f'아이템 "{item}"은(는) 사용할 수 없는 아이템입니다.', ephemeral=True)
 
 # 슬래시 커맨드: 시세 업데이트
 @bot.tree.command(name='update_price', description='Update the price of an item.')
@@ -124,10 +110,10 @@ async def update_price(interaction: discord.Interaction, item: str, shoom_price:
     if item in prices:
         prices[item]["슘 시세"] = shoom_price
         prices[item]["현금 시세"] = shoom_price * 0.7
-        save_prices()
+        save_data(prices_file, prices)
         await interaction.response.send_message(f'아이템 "{item}"의 시세가 슘 시세: {shoom_price}슘, 현금 시세: {shoom_price * 0.7}원으로 업데이트되었습니다.')
     else:
-        await interaction.response.send_message(f'아이템 "{item}"은(는) 사용할 수 없는 아이템입니다.')
+        await interaction.response.send_message(f'아이템 "{item}"은(는) 사용할 수 없는 아이템입니다.', ephemeral=True)
 
 # 슬래시 커맨드: 현재 재고 확인
 @bot.tree.command(name='inventory', description='Show the current inventory with prices.')
@@ -167,3 +153,4 @@ async def show_inventory(interaction: discord.Interaction):
 # 봇 실행
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 bot.run(TOKEN)
+
