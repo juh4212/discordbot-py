@@ -6,6 +6,7 @@ import os
 # 인텐트 설정
 intents = discord.Intents.default()
 intents.messages = True
+intents.message_content = True
 
 # 봇과의 상호작용을 위한 객체 생성
 bot = commands.Bot(command_prefix='!', intents=intents)
@@ -24,20 +25,15 @@ inventory = {item: 0 for item in creatures + items}
 inventory_file = "inventory.json"
 prices_file = "prices.json"
 
-def initialize_files():
-    """파일을 초기화합니다."""
-    if not os.path.exists(inventory_file):
-        with open(inventory_file, "w") as f:
-            json.dump(inventory, f)
-    if not os.path.exists(prices_file):
-        with open(prices_file, "w") as f:
-            json.dump(prices, f)
-
 def load_inventory():
     """재고를 JSON 파일에서 불러옵니다."""
     if os.path.exists(inventory_file):
         with open(inventory_file, "r") as f:
-            return json.load(f)
+            loaded_inventory = json.load(f)
+            for item in creatures + items:
+                if item not in loaded_inventory:
+                    loaded_inventory[item] = 0
+            return loaded_inventory
     else:
         return {item: 0 for item in creatures + items}
 
@@ -62,10 +58,9 @@ def save_prices():
 @bot.event
 async def on_ready():
     global inventory, prices
-    initialize_files()
     inventory = load_inventory()
     prices = load_prices()
-    print(f'Logged in as {bot.user}')
+    print(f'Logged in as {bot.user.name}')
 
 # 명령어: 아이템 추가
 @bot.command(name='add')
@@ -136,10 +131,13 @@ async def show_inventory(ctx):
         cash_price = prices_info["현금 시세"]
         embed3.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
 
-    # 임베드 메시지를 디스코드에 전송
-    await ctx.send(embeds=[embed1, embed2, embed3])
+    # 임베드 메시지를 개별로 디스코드에 전송
+    await ctx.send(embed=embed1)
+    await ctx.send(embed=embed2)
+    await ctx.send(embed=embed3)
 
 # 봇 실행
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 bot.run(TOKEN)
+
 
