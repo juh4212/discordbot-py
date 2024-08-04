@@ -155,3 +155,4 @@ async def show_inventory(interaction: discord.Interaction):
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 bot.run(TOKEN)
 
+
