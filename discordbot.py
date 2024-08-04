@@ -8,7 +8,7 @@ intents = discord.Intents.default()
 intents.messages = True
 
 # 봇과의 상호작용을 위한 객체 생성
-bot = commands.Bot(command_prefix='!', intents=intents)
+bot = discord.Bot(intents=intents)
 
 # 고정된 아이템 목록
 creatures = ["angelic warden", "aolenus", "ardor warden", "boreal warden", "corsarlett", "caldonterrus", "eigion warden", "ghartokus", "golgaroth", "hellion warden", "jhiggo jangl", "jotunhel", "luxces", "lus adarch", "menace", "magnacetus", "mijusuima", "nolumoth", "pacedegon", "parahexilian", "sang toare", "takamorath", "urzuk", "umbraxi", "verdent warden", "whispthera", "woodralone"]
@@ -62,44 +62,44 @@ async def on_ready():
     print(f'Logged in as {bot.user.name}')
 
 # 명령어: 아이템 추가
-@bot.command(name='add')
+@bot.slash_command(name='add', description='Add items to the inventory.')
 async def add_item(ctx, item: str, quantity: int):
     """고정된 아이템 목록에 아이템을 추가합니다."""
     if item in inventory:
         inventory[item] += quantity
         save_inventory()
-        await ctx.send(f'아이템 "{item}"이(가) {quantity}개 추가되었습니다.')
+        await ctx.respond(f'아이템 "{item}"이(가) {quantity}개 추가되었습니다.')
     else:
-        await ctx.send(f'아이템 "{item}"은(는) 사용할 수 없는 아이템입니다.')
+        await ctx.respond(f'아이템 "{item}"은(는) 사용할 수 없는 아이템입니다.')
 
 # 명령어: 아이템 제거
-@bot.command(name='remove')
+@bot.slash_command(name='remove', description='Remove items from the inventory.')
 async def remove_item(ctx, item: str, quantity: int):
     """고정된 아이템 목록에서 아이템을 제거합니다."""
     if item in inventory:
         if inventory[item] >= quantity:
             inventory[item] -= quantity
             save_inventory()
-            await ctx.send(f'아이템 "{item}"이(가) {quantity}개 제거되었습니다.')
+            await ctx.respond(f'아이템 "{item}"이(가) {quantity}개 제거되었습니다.')
         else:
-            await ctx.send(f'아이템 "{item}"의 재고가 부족합니다.')
+            await ctx.respond(f'아이템 "{item}"의 재고가 부족합니다.')
     else:
-        await ctx.send(f'아이템 "{item}"은(는) 사용할 수 없는 아이템입니다.')
+        await ctx.respond(f'아이템 "{item}"은(는) 사용할 수 없는 아이템입니다.')
 
 # 명령어: 시세 업데이트
-@bot.command(name='update_price')
+@bot.slash_command(name='update_price', description='Update the price of an item.')
 async def update_price(ctx, item: str, shoom_price: int):
     """아이템의 시세를 업데이트합니다."""
     if item in prices:
         prices[item]["슘 시세"] = shoom_price
         prices[item]["현금 시세"] = shoom_price * 0.7
         save_prices()
-        await ctx.send(f'아이템 "{item}"의 시세가 슘 시세: {shoom_price}슘, 현금 시세: {shoom_price * 0.7}원으로 업데이트되었습니다.')
+        await ctx.respond(f'아이템 "{item}"의 시세가 슘 시세: {shoom_price}슘, 현금 시세: {shoom_price * 0.7}원으로 업데이트되었습니다.')
     else:
-        await ctx.send(f'아이템 "{item}"은(는) 사용할 수 없는 아이템입니다.')
+        await ctx.respond(f'아이템 "{item}"은(는) 사용할 수 없는 아이템입니다.')
 
 # 명령어: 현재 재고 확인
-@bot.command(name='inventory')
+@bot.slash_command(name='inventory', description='Show the current inventory with prices.')
 async def show_inventory(ctx):
     """현재 재고를 카테고리별로 임베드 형태로 표시합니다."""
     embed1 = discord.Embed(title="현재 재고 목록 (Creatures Part 1)", color=discord.Color.blue())
@@ -131,9 +131,9 @@ async def show_inventory(ctx):
         embed3.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
 
     # 임베드 메시지를 개별로 디스코드에 전송
-    await ctx.send(embed=embed1)
-    await ctx.send(embed=embed2)
-    await ctx.send(embed=embed3)
+    await ctx.respond(embed=embed1)
+    await ctx.respond(embed=embed2)
+    await ctx.respond(embed=embed3)
 
 # 봇 실행
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
