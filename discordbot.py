@@ -17,7 +17,7 @@ creatures = ["angelic warden", "aolenus", "ardor warden", "boreal warden", "cors
 items = ["death gacha token", "revive token", "max growth token", "partial growth token", "strong glimmer token", "appearance change token"]
 
 # 시세 정보 초기화
-prices = {item: {"슘 시세": 0, "현금 시세": 0} for item in creatures + items}
+prices = {item: {"슘 시세": "N/A", "현금 시세": "N/A"} for item in creatures + items}
 
 # 재고 저장소 초기화
 inventory = {item: 0 for item in creatures + items}
@@ -49,7 +49,7 @@ def load_prices():
         with open(prices_file, "r") as f:
             return json.load(f)
     else:
-        return {item: {"슘 시세": 0, "현금 시세": 0} for item in creatures + items}
+        return {item: {"슘 시세": "N/A", "현금 시세": "N/A"} for item in creatures + items}
 
 def save_prices():
     """시세를 JSON 파일에 저장합니다."""
@@ -125,27 +125,27 @@ async def show_inventory(interaction: discord.Interaction):
 
     # Creatures 목록 추가 (첫 번째 임베드)
     for item in creatures[:len(creatures)//2]:
-        quantity = inventory[item]
+        quantity = inventory.get(item, 0)
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
         shoom_price = prices_info["슘 시세"]
         cash_price = prices_info["현금 시세"]
-        embed1.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
+        embed1.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}\n현금 시세: {cash_price}", inline=True)
 
     # Creatures 목록 추가 (두 번째 임베드)
     for item in creatures[len(creatures)//2:]:
-        quantity = inventory[item]
+        quantity = inventory.get(item, 0)
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
         shoom_price = prices_info["슘 시세"]
         cash_price = prices_info["현금 시세"]
-        embed2.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
+        embed2.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}\n현금 시세: {cash_price}", inline=True)
 
     # Items 목록 추가 (세 번째 임베드)
     for item in items:
-        quantity = inventory[item]
+        quantity = inventory.get(item, 0)
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
         shoom_price = prices_info["슘 시세"]
         cash_price = prices_info["현금 시세"]
-        embed3.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
+        embed3.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}\n현금 시세: {cash_price}", inline=True)
 
     # 임베드 메시지를 디스코드에 전송
     await interaction.response.send_message(embeds=[embed1, embed2, embed3])
