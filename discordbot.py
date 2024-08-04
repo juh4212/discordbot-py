@@ -6,7 +6,7 @@ import os
 
 # 인텐트 설정
 intents = discord.Intents.default()
-intents.messages = True
+intents.message_content = True
 
 # 봇과의 상호작용을 위한 객체 생성
 bot = commands.Bot(command_prefix='!', intents=intents)
@@ -156,6 +156,7 @@ async def show_inventory(interaction: discord.Interaction):
 # 봇 실행
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 bot.run(TOKEN)
+
 
 
 
