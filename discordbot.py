@@ -4,15 +4,30 @@ from discord import app_commands
 import json
 import os
 
-# 환경 변수에서 토큰 가져오기
-TOKEN = os.getenv('DISCORD_BOT_TOKEN')
+# 데이터 디렉토리가 존재하는지 확인하고 없으면 생성
+data_directory = '/app/data'
+if not os.path.exists(data_directory):
+    os.makedirs(data_directory)
+
+# 파일 경로 정의
+inventory_file = os.path.join(data_directory, "inventory.json")
+prices_file = os.path.join(data_directory, "prices.json")
+
+# inventory.json 파일이 존재하지 않으면 생성
+if not os.path.exists(inventory_file):
+    with open(inventory_file, 'w') as f:
+        json.dump({}, f)
+
+# prices.json 파일이 존재하지 않으면 생성
+if not os.path.exists(prices_file):
+    with open(prices_file, 'w') as f:
+        json.dump({}, f)
 
 # 인텐트 설정
 intents = discord.Intents.default()
 intents.messages = True
-intents.message_content = True
 
-# 봇과의 상호작용을 위한 객체 생성
+# 봇 객체 생성
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 # 고정된 아이템 목록
@@ -25,15 +40,6 @@ prices = {item: {"슘 시세": 0, "현금 시세": 0} for item in creatures + it
 # 재고 저장소 초기화
 inventory = {item: 0 for item in creatures + items}
 
-# 절대 경로 설정 및 디렉토리 생성
-data_directory = "/app/data"
-if not os.path.exists(data_directory):
-    os.makedirs(data_directory)
-
-# 재고 파일 경로 (절대 경로 사용)
-inventory_file = os.path.join(data_directory, "inventory.json")
-prices_file = os.path.join(data_directory, "prices.json")
-
 def load_inventory():
     """재고를 JSON 파일에서 불러옵니다."""
     if os.path.exists(inventory_file):
@@ -44,8 +50,7 @@ def load_inventory():
                     loaded_inventory[item] = 0
             return loaded_inventory
     else:
-        save_inventory()  # 파일이 없으면 기본 재고 정보를 저장
-        return inventory
+        return {item: 0 for item in creatures + items}
 
 def save_inventory():
     """재고를 JSON 파일에 저장합니다."""
@@ -58,8 +63,7 @@ def load_prices():
         with open(prices_file, "r") as f:
             return json.load(f)
     else:
-        save_prices()  # 파일이 없으면 기본 시세 정보를 저장
-        return prices
+        return {item: {"슘 시세": 0, "현금 시세": 0} for item in creatures + items}
 
 def save_prices():
     """시세를 JSON 파일에 저장합니다."""
@@ -161,4 +165,5 @@ async def show_inventory(interaction: discord.Interaction):
     await interaction.response.send_message(embeds=[embed1, embed2, embed3])
 
 # 봇 실행
+TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 bot.run(TOKEN)
