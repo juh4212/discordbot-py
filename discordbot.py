@@ -112,7 +112,7 @@ async def remove_item(interaction: discord.Interaction, item: str, quantity: int
 @bot.tree.command(name='price', description='Update the price of an item.')
 @app_commands.describe(item='The item to update the price for', shoom_price='The new shoom price of the item')
 @app_commands.autocomplete(item=autocomplete_item)
-async def update_price(interaction: discord.Interaction, item: str, shoom_price: int):
+async def price(interaction: discord.Interaction, item: str, shoom_price: int):
     """아이템의 시세를 업데이트합니다."""
     if item in prices:
         prices[item]["슘 시세"] = shoom_price
