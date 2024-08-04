@@ -4,10 +4,16 @@ from discord import app_commands
 import json
 import os
 
+# 환경 변수에서 BASE_DIR 가져오기
+BASE_DIR = os.getenv('BASE_DIR', '/app/data')
+
+# 인벤토리와 가격 파일의 절대 경로 설정
+inventory_file = os.path.join(BASE_DIR, 'inventory.json')
+prices_file = os.path.join(BASE_DIR, 'prices.json')
+
 # 인텐트 설정
 intents = discord.Intents.default()
 intents.messages = True
-intents.message_content = True
 
 # 봇과의 상호작용을 위한 객체 생성
 bot = commands.Bot(command_prefix='!', intents=intents)
@@ -21,10 +27,6 @@ prices = {item: {"슘 시세": 0, "현금 시세": 0} for item in creatures + it
 
 # 재고 저장소 초기화
 inventory = {item: 0 for item in creatures + items}
-
-# 재고 파일 경로
-inventory_file = "inventory.json"
-prices_file = "prices.json"
 
 def load_inventory():
     """재고를 JSON 파일에서 불러옵니다."""
@@ -42,7 +44,6 @@ def save_inventory():
     """재고를 JSON 파일에 저장합니다."""
     with open(inventory_file, "w") as f:
         json.dump(inventory, f)
-    print("Inventory saved:", inventory)  # 저장 확인을 위해 출력
 
 def load_prices():
     """시세를 JSON 파일에서 불러옵니다."""
@@ -56,7 +57,6 @@ def save_prices():
     """시세를 JSON 파일에 저장합니다."""
     with open(prices_file, "w") as f:
         json.dump(prices, f)
-    print("Prices saved:", prices)  # 저장 확인을 위해 출력
 
 @bot.event
 async def on_ready():
@@ -155,5 +155,6 @@ async def show_inventory(interaction: discord.Interaction):
 # 봇 실행
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 bot.run(TOKEN)
+
 
 
