@@ -5,8 +5,7 @@ import os
 
 # 인텐트 설정
 intents = discord.Intents.default()
-intents.messages = True
-# intents.message_content = True # 이 줄을 제거합니다.
+intents.message_content = True
 
 # 봇과의 상호작용을 위한 객체 생성
 bot = commands.Bot(command_prefix='!', intents=intents)
@@ -25,15 +24,20 @@ inventory = {item: 0 for item in creatures + items}
 inventory_file = "inventory.json"
 prices_file = "prices.json"
 
+def initialize_files():
+    """파일을 초기화합니다."""
+    if not os.path.exists(inventory_file):
+        with open(inventory_file, "w") as f:
+            json.dump(inventory, f)
+    if not os.path.exists(prices_file):
+        with open(prices_file, "w") as f:
+            json.dump(prices, f)
+
 def load_inventory():
     """재고를 JSON 파일에서 불러옵니다."""
     if os.path.exists(inventory_file):
         with open(inventory_file, "r") as f:
-            loaded_inventory = json.load(f)
-            for item in creatures + items:
-                if item not in loaded_inventory:
-                    loaded_inventory[item] = 0
-            return loaded_inventory
+            return json.load(f)
     else:
         return {item: 0 for item in creatures + items}
 
@@ -58,6 +62,7 @@ def save_prices():
 @bot.event
 async def on_ready():
     global inventory, prices
+    initialize_files()
     inventory = load_inventory()
     prices = load_prices()
     print(f'Logged in as {bot.user}')
