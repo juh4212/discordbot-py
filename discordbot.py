@@ -23,11 +23,12 @@ inventory = {item: 0 for item in creatures + items}
 
 # 재고 및 시세 파일 경로 설정
 base_dir = os.path.dirname(os.path.abspath(__file__))
-inventory_file = os.path.join(base_dir, "data", "inventory.json")
-prices_file = os.path.join(base_dir, "data", "prices.json")
+data_dir = os.path.join(base_dir, "data")
+inventory_file = os.path.join(data_dir, "inventory.json")
+prices_file = os.path.join(data_dir, "prices.json")
 
 # 디렉토리 생성
-os.makedirs(os.path.dirname(inventory_file), exist_ok=True)
+os.makedirs(data_dir, exist_ok=True)
 
 def load_inventory():
     """재고를 JSON 파일에서 불러옵니다."""
@@ -156,7 +157,6 @@ async def show_inventory(interaction: discord.Interaction):
 # 봇 실행
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 bot.run(TOKEN)
-
 
 
 
