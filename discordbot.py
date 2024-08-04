@@ -5,7 +5,7 @@ import os
 
 # 인텐트 설정
 intents = discord.Intents.default()
-intents.message_content = True
+intents.messages = True
 
 # 봇과의 상호작용을 위한 객체 생성
 bot = commands.Bot(command_prefix='!', intents=intents)
