@@ -42,6 +42,7 @@ def save_inventory():
     """재고를 JSON 파일에 저장합니다."""
     with open(inventory_file, "w") as f:
         json.dump(inventory, f)
+    print("Inventory saved:", inventory)  # 저장 확인을 위해 출력
 
 def load_prices():
     """시세를 JSON 파일에서 불러옵니다."""
@@ -55,6 +56,7 @@ def save_prices():
     """시세를 JSON 파일에 저장합니다."""
     with open(prices_file, "w") as f:
         json.dump(prices, f)
+    print("Prices saved:", prices)  # 저장 확인을 위해 출력
 
 @bot.event
 async def on_ready():
