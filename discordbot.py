@@ -6,6 +6,7 @@ import os
 
 # 인텐트 설정
 intents = discord.Intents.default()
+intents.messages = True
 intents.message_content = True
 
 # 봇과의 상호작용을 위한 객체 생성
@@ -19,28 +20,20 @@ items = ["death gacha token", "revive token", "max growth token", "partial growt
 prices = {item: {"슘 시세": "N/A", "현금 시세": "N/A"} for item in creatures + items}
 
 # 재고 저장소 초기화
-inventory = {item: 0 for item in creatures + items}
+inventory = {item: "N/A" for item in creatures + items}
 
-# 재고 및 시세 파일 경로 설정
-base_dir = os.path.dirname(os.path.abspath(__file__))
-data_dir = os.path.join(base_dir, "data")
-inventory_file = os.path.join(data_dir, "inventory.json")
-prices_file = os.path.join(data_dir, "prices.json")
-
-# 디렉토리 생성
-os.makedirs(data_dir, exist_ok=True)
+# 현재 파일 경로
+current_path = os.path.dirname(os.path.abspath(__file__))
+inventory_file = os.path.join(current_path, "inventory.json")
+prices_file = os.path.join(current_path, "prices.json")
 
 def load_inventory():
     """재고를 JSON 파일에서 불러옵니다."""
     if os.path.exists(inventory_file):
         with open(inventory_file, "r") as f:
-            loaded_inventory = json.load(f)
-            for item in creatures + items:
-                if item not in loaded_inventory:
-                    loaded_inventory[item] = 0
-            return loaded_inventory
+            return json.load(f)
     else:
-        return {item: 0 for item in creatures + items}
+        return {item: "N/A" for item in creatures + items}
 
 def save_inventory():
     """재고를 JSON 파일에 저장합니다."""
@@ -83,6 +76,8 @@ async def autocomplete_item(interaction: discord.Interaction, current: str):
 async def add_item(interaction: discord.Interaction, item: str, quantity: int):
     """고정된 아이템 목록에 아이템을 추가합니다."""
     if item in inventory:
+        if inventory[item] == "N/A":
+            inventory[item] = 0
         inventory[item] += quantity
         save_inventory()
         await interaction.response.send_message(f'아이템 "{item}"이(가) {quantity}개 추가되었습니다.')
@@ -133,7 +128,7 @@ async def show_inventory(interaction: discord.Interaction):
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
         shoom_price = prices_info["슘 시세"]
         cash_price = prices_info["현금 시세"]
-        embed1.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}\n현금 시세: {cash_price}", inline=True)
+        embed1.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
 
     # Creatures 목록 추가 (두 번째 임베드)
     for item in creatures[len(creatures)//2:]:
@@ -141,7 +136,7 @@ async def show_inventory(interaction: discord.Interaction):
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
         shoom_price = prices_info["슘 시세"]
         cash_price = prices_info["현금 시세"]
-        embed2.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}\n현금 시세: {cash_price}", inline=True)
+        embed2.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
 
     # Items 목록 추가 (세 번째 임베드)
     for item in items:
@@ -149,7 +144,7 @@ async def show_inventory(interaction: discord.Interaction):
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
         shoom_price = prices_info["슘 시세"]
         cash_price = prices_info["현금 시세"]
-        embed3.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}\n현금 시세: {cash_price}", inline=True)
+        embed3.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
 
     # 임베드 메시지를 디스코드에 전송
     await interaction.response.send_message(embeds=[embed1, embed2, embed3])
@@ -157,6 +152,8 @@ async def show_inventory(interaction: discord.Interaction):
 # 봇 실행
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 bot.run(TOKEN)
+
+
 
 
 
