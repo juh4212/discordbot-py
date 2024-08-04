@@ -119,38 +119,43 @@ async def update_price(interaction: discord.Interaction, item: str, shoom_price:
 @bot.tree.command(name='inventory', description='Show the current inventory with prices.')
 async def show_inventory(interaction: discord.Interaction):
     """현재 재고를 카테고리별로 임베드 형태로 표시합니다."""
-    embed1 = discord.Embed(title="현재 재고 목록 (Creatures Part 1)", color=discord.Color.blue())
-    embed2 = discord.Embed(title="현재 재고 목록 (Creatures Part 2)", color=discord.Color.blue())
-    embed3 = discord.Embed(title="현재 재고 목록 (Items)", color=discord.Color.green())
+    try:
+        embed1 = discord.Embed(title="현재 재고 목록 (Creatures Part 1)", color=discord.Color.blue())
+        embed2 = discord.Embed(title="현재 재고 목록 (Creatures Part 2)", color=discord.Color.blue())
+        embed3 = discord.Embed(title="현재 재고 목록 (Items)", color=discord.Color.green())
 
-    # Creatures 목록 추가 (첫 번째 임베드)
-    for item in creatures[:len(creatures)//2]:
-        quantity = inventory[item]
-        prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
-        shoom_price = prices_info["슘 시세"]
-        cash_price = prices_info["현금 시세"]
-        embed1.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
+        # Creatures 목록 추가 (첫 번째 임베드)
+        for item in creatures[:len(creatures)//2]:
+            quantity = inventory[item]
+            prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
+            shoom_price = prices_info["슘 시세"]
+            cash_price = prices_info["현금 시세"]
+            embed1.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
 
-    # Creatures 목록 추가 (두 번째 임베드)
-    for item in creatures[len(creatures)//2:]:
-        quantity = inventory[item]
-        prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
-        shoom_price = prices_info["슘 시세"]
-        cash_price = prices_info["현금 시세"]
-        embed2.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
+        # Creatures 목록 추가 (두 번째 임베드)
+        for item in creatures[len(creatures)//2:]:
+            quantity = inventory[item]
+            prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
+            shoom_price = prices_info["슘 시세"]
+            cash_price = prices_info["현금 시세"]
+            embed2.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
 
-    # Items 목록 추가 (세 번째 임베드)
-    for item in items:
-        quantity = inventory[item]
-        prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
-        shoom_price = prices_info["슘 시세"]
-        cash_price = prices_info["현금 시세"]
-        embed3.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
+        # Items 목록 추가 (세 번째 임베드)
+        for item in items:
+            quantity = inventory[item]
+            prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
+            shoom_price = prices_info["슘 시세"]
+            cash_price = prices_info["현금 시세"]
+            embed3.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
 
-    # 임베드 메시지를 디스코드에 전송
-    await interaction.response.send_message(embeds=[embed1, embed2, embed3])
+        # 임베드 메시지를 디스코드에 전송
+        await interaction.response.send_message(embeds=[embed1, embed2, embed3])
+    except Exception as e:
+        print(f'Error occurred: {e}')
+        await interaction.response.send_message('재고 정보를 불러오는 중 오류가 발생했습니다.')
 
 # 봇 실행
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 bot.run(TOKEN)
+
 
