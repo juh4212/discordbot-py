@@ -185,21 +185,28 @@ async def sell_message(interaction: discord.Interaction):
     for item in creatures:
         prices_info = prices.get(item, {"현금 시세": "N/A"})
         cash_price = prices_info["현금 시세"]
-        display_price = round(float(cash_price) * 0.0001, 2) if cash_price != "N/A" else "N/A"
+        if cash_price != "N/A":
+            display_price = float(cash_price) * 0.0001
+            display_price = f"{int(display_price)}.{str(display_price).split('.')[1][:2]}"
+        else:
+            display_price = "N/A"
         creatures_message += f"• {item.title()} {display_price}\n"
 
     # Items 목록 추가
     for item in items:
         prices_info = prices.get(item, {"현금 시세": "N/A"})
         cash_price = prices_info["현금 시세"]
-        display_price = round(float(cash_price) * 0.0001, 2) if cash_price != "N/A" else "N/A"
+        if cash_price != "N/A":
+            display_price = float(cash_price) * 0.0001
+            display_price = f"{int(display_price)}.{str(display_price).split('.')[1][:2]}"
+        else:
+            display_price = "N/A"
         items_message += f"• {item.title()} {display_price}\n"
 
     # 필수 메시지 추가
     final_message = creatures_message + items_message + "\n• 문상 X  계좌 O\n• 구매를 원하시면 갠으로! \n• 재고는 갠디로 와서 물어봐주세요!"
     
     await interaction.response.send_message(final_message)
-
 # 환경 변수에서 토큰을 가져옵니다.
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 if TOKEN is None:
