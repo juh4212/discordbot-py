@@ -153,7 +153,7 @@ async def show_inventory(interaction: discord.Interaction):
     embed2 = discord.Embed(title="현재 재고 목록 (Creatures Part 2)", color=discord.Color.blue())
     embed3 = discord.Embed(title="현재 재고 목록 (Items)", color=discord.Color.green())
 
- # Creatures 목록 추가 (첫 번째 임베드)
+    # Creatures 목록 추가 (첫 번째 임베드)
     for item in creatures[:len(creatures)//2]:
         quantity = inventory.get(item, "N/A")
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
@@ -161,7 +161,7 @@ async def show_inventory(interaction: discord.Interaction):
         cash_price = prices_info["현금 시세"]
         embed1.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
 
-    # Creatures 목록 추가 (두 번째 임베드)
+ # Creatures 목록 추가 (두 번째 임베드)
     for item in creatures[len(creatures)//2:]:
         quantity = inventory.get(item, "N/A")
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
@@ -217,4 +217,3 @@ TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 if TOKEN is None:
     raise ValueError("DISCORD_BOT_TOKEN 환경 변수가 설정되지 않았습니다.")
 bot.run(TOKEN)
-
