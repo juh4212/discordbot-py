@@ -6,6 +6,7 @@ import os
 # 인텐트 설정
 intents = discord.Intents.default()
 intents.messages = True
+intents.message_content = True  # 메시지 콘텐츠 접근 권한 추가
 
 # 봇과의 상호작용을 위한 객체 생성
 bot = commands.Bot(command_prefix='!', intents=intents)
