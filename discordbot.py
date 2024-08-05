@@ -149,7 +149,7 @@ async def show_inventory(interaction: discord.Interaction):
     await interaction.response.send_message(embeds=[embed1, embed2, embed3])
 
 # 봇 실행
-TOKEN = os.getenv('DISCORD_BOT_TOKEN')
+TOKEN = 'YOUR_BOT_TOKEN'  # 여기에 토큰을 넣으세요
 bot.run(TOKEN)
 
 
