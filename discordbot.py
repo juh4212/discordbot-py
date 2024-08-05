@@ -1,4 +1,4 @@
-    import discord
+import discord
 from discord.ext import commands
 import sqlite3
 import os
@@ -21,8 +21,12 @@ creatures = [
 ]
 items = ["death gacha token", "revive token", "max growth token", "partial growth token", "strong glimmer token", "appearance change token"]
 
+# 데이터베이스 파일 경로 설정
+BASE_DIR = os.getenv('BASE_DIR', '.')
+db_file = os.path.join(BASE_DIR, 'inventory.db')
+
 # SQLite 데이터베이스 초기화
-conn = sqlite3.connect('inventory.db')
+conn = sqlite3.connect(db_file)
 c = conn.cursor()
 c.execute('''CREATE TABLE IF NOT EXISTS inventory (
              name TEXT PRIMARY KEY,
@@ -129,14 +133,15 @@ async def show_inventory(interaction: discord.Interaction):
         cash_price = prices_info["현금 시세"]
         embed2.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
 
-    # Items 목록 추가 (세 번째 임베드)
+  # Items 목록 추가 (세 번째 임베드)
     for item in items:
         quantity = inventory.get(item, "N/A")
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
         shoom_price = prices_info["슘 시세"]
         cash_price = prices_info["현금 시세"]
         embed3.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
-# 임베드 메시지를 디스코드에 전송
+
+    # 임베드 메시지를 디스코드에 전송
     await interaction.response.send_message(embeds=[embed1, embed2, embed3])
 
 # 슬래시 커맨드: 판매 메시지 생성
@@ -170,14 +175,6 @@ async def sell_message(interaction: discord.Interaction):
     final_message = creatures_message + items_message + "\n• 문상 X  계좌 O\n• 구매를 원하시면 갠으로! \n• 재고는 갠디로 와서 물어봐주세요!"
     
     await interaction.response.send_message(final_message)
-
-# 슬래시 커맨드: 데이터 저장
-@bot.tree.command(name='save', description='Save the current inventory and prices.')
-async def save(interaction: discord.Interaction):
-    """현재 재고와 시세를 저장합니다."""
-    for item in inventory:
-        save_data(item, inventory[item], prices[item]["슘 시세"], prices[item]["현금 시세"])
-    await interaction.response.send_message("현재 재고와 시세가 성공적으로 저장되었습니다.")
 
 # 환경 변수에서 토큰을 가져옵니다.
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
