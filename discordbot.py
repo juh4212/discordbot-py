@@ -178,8 +178,7 @@ async def show_inventory(interaction: discord.Interaction):
         shoom_price = prices_info["슘 시세"]
         cash_price = prices_info["현금 시세"]
         embed3.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
-
-    # 임베드 메시지를 디스코드에 전송
+   # 임베드 메시지를 디스코드에 전송
     await interaction.response.send_message(embeds=[embed1, embed2, embed3])
 
 # 슬래시 커맨드: 판매 메시지 생성
@@ -213,6 +212,14 @@ async def sell_message(interaction: discord.Interaction):
     final_message = creatures_message + items_message + "\n• 문상 X  계좌 O\n• 구매를 원하시면 갠으로! \n• 재고는 갠디로 와서 물어봐주세요!"
     
     await interaction.response.send_message(final_message)
+
+# 슬래시 커맨드: 수동 저장
+@bot.tree.command(name='save', description='Save the current inventory and prices.')
+async def save_data(interaction: discord.Interaction):
+    """현재의 인벤토리와 시세를 저장합니다."""
+    save_inventory()
+    save_prices()
+    await interaction.response.send_message("현재 데이터가 저장되었습니다.")
 
 # 환경 변수에서 토큰을 가져옵니다.
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
