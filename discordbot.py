@@ -57,10 +57,13 @@ def save_prices():
 @bot.event
 async def on_ready():
     global inventory, prices
-    inventory = load_inventory()
-    prices = load_prices()
-    print(f'Logged in as {bot.user.name}')
-    await bot.tree.sync()  # 슬래시 커맨드를 디스코드와 동기화합니다.
+    try:
+        inventory = load_inventory()
+        prices = load_prices()
+        print(f'Logged in as {bot.user.name}')
+        await bot.tree.sync()  # 슬래시 커맨드를 디스코드와 동기화합니다.
+    except Exception as e:
+        print(f'Error in on_ready: {e}')
 
 # 자동 완성 함수
 async def autocomplete_item(interaction: discord.Interaction, current: str):
