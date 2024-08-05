@@ -11,7 +11,13 @@ intents.messages = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 # 고정된 아이템 목록
-creatures = ["angelic warden", "aolenus", "ardor warden", "boreal warden", "corsarlett", "caldonterrus", "eigion warden", "ghartokus", "golgaroth", "hellion warden", "jhiggo jangl", "jotunhel", "luxces", "lus adarch", "menace", "magnacetus", "mijusuima", "nolumoth", "pacedegon", "parahexilian", "sang toare", "takamorath", "urzuk", "umbraxi", "verdent warden", "whispthera", "woodralone"]
+creatures = [
+    "angelic warden", "aolenus", "ardor warden", "boreal warden", "caldonterrus", "corsarlett", 
+    "eigion warden", "ghartokus", "golgaroth", "hellion warden", "jhiggo jangl", "jotunhel", 
+    "luxces", "lus adarch", "magnacetus", "menace", "mijusuima", "nolumoth", "pacedegon", 
+    "parahexilian", "sang toare", "takamorath", "umbraxi", "urzuk", "verdent warden", 
+    "voletexius", "whispthera", "woodralone", "yohsog"
+]
 items = ["death gacha token", "revive token", "max growth token", "partial growth token", "strong glimmer token", "appearance change token"]
 
 # 시세 정보 초기화
