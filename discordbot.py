@@ -185,14 +185,14 @@ async def sell_message(interaction: discord.Interaction):
     for item in creatures:
         prices_info = prices.get(item, {"현금 시세": "N/A"})
         cash_price = prices_info["현금 시세"]
-        display_price = float(cash_price) * 0.0001 if cash_price != "N/A" else "N/A"
+        display_price = round(float(cash_price) * 0.0001, 2) if cash_price != "N/A" else "N/A"
         creatures_message += f"• {item.title()} {display_price}\n"
 
     # Items 목록 추가
     for item in items:
         prices_info = prices.get(item, {"현금 시세": "N/A"})
         cash_price = prices_info["현금 시세"]
-        display_price = float(cash_price) * 0.0001 if cash_price != "N/A" else "N/A"
+        display_price = round(float(cash_price) * 0.0001, 2) if cash_price != "N/A" else "N/A"
         items_message += f"• {item.title()} {display_price}\n"
 
     # 필수 메시지 추가
