@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-import sqlite3
+import json
 import os
 
 # 인텐트 설정
@@ -25,75 +25,41 @@ items = [
     "strong glimmer token", "appearance change token"
 ]
 
-# 현재 파일 경로
-current_path = os.path.dirname(os.path.abspath(__file__))
-db_path = os.path.join(current_path, "data", "inventory_prices.db")
+# 파일 경로 설정
+inventory_file = os.path.join(os.path.dirname(__file__), 'inventory.json')
+prices_file = os.path.join(os.path.dirname(__file__), 'prices.json')
 
-# 데이터베이스 초기화
-def init_db():
-    if not os.path.exists(os.path.dirname(db_path)):
-        os.makedirs(os.path.dirname(db_path))
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS inventory (
-            item TEXT PRIMARY KEY,
-            quantity INTEGER
-        )
-    ''')
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS prices (
-            item TEXT PRIMARY KEY,
-            shoom_price INTEGER,
-            cash_price REAL
-        )
-    ''')
-    conn.commit()
-    conn.close()
+# 재고 초기화
+inventory = {item: "N/A" for item in creatures + items}
+prices = {item: {"슘 시세": "N/A", "현금 시세": "N/A"} for item in creatures + items}
 
+# 파일에서 재고 불러오기
 def load_inventory():
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    c.execute('SELECT * FROM inventory')
-    inventory = {row[0]: row[1] for row in c.fetchall()}
-    for item in creatures + items:
-        if item not in inventory:
-            inventory[item] = "N/A"
-    conn.close()
+    if os.path.exists(inventory_file):
+        with open(inventory_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
     return inventory
 
-def save_inventory(inventory):
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    for item, quantity in inventory.items():
-        c.execute('INSERT OR REPLACE INTO inventory (item, quantity) VALUES (?, ?)', (item, quantity))
-    conn.commit()
-    conn.close()
-
+# 파일에서 시세 불러오기
 def load_prices():
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    c.execute('SELECT * FROM prices')
-    prices = {row[0]: {"슘 시세": row[1], "현금 시세": row[2]} for row in c.fetchall()}
-    for item in creatures + items:
-        if item not in prices:
-            prices[item] = {"슘 시세": "N/A", "현금 시세": "N/A"}
-    conn.close()
+    if os.path.exists(prices_file):
+        with open(prices_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
     return prices
 
+# 재고 파일에 저장
+def save_inventory(inventory):
+    with open(inventory_file, 'w', encoding='utf-8') as f:
+        json.dump(inventory, f, ensure_ascii=False, indent=4)
+
+# 시세 파일에 저장
 def save_prices(prices):
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    for item, price in prices.items():
-        c.execute('INSERT OR REPLACE INTO prices (item, shoom_price, cash_price) VALUES (?, ?, ?)',
-                  (item, price["슘 시세"], price["현금 시세"]))
-    conn.commit()
-    conn.close()
+    with open(prices_file, 'w', encoding='utf-8') as f:
+        json.dump(prices, f, ensure_ascii=False, indent=4)
 
 @bot.event
 async def on_ready():
     global inventory, prices
-    init_db()
     inventory = load_inventory()
     prices = load_prices()
     print(f'Logged in as {bot.user.name}')
@@ -182,7 +148,5 @@ async def show_inventory(interaction: discord.Interaction):
 # 봇 실행
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 bot.run(TOKEN)
-
-
 
 
