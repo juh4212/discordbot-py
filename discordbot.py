@@ -51,9 +51,14 @@ def load_inventory():
 
 def save_inventory():
     """재고를 JSON 파일에 저장하고 백업합니다."""
-    with open(inventory_file, "w") as f:
-        json.dump(inventory, f)
-    shutil.copy(inventory_file, os.path.join(backup_dir, inventory_file))
+    try:
+        with open(inventory_file, "w") as f:
+            json.dump(inventory, f)
+            f.flush()
+            os.fsync(f.fileno())
+        shutil.copy(inventory_file, os.path.join(backup_dir, inventory_file))
+    except Exception as e:
+        print(f'Error saving inventory: {e}')
 
 def load_prices():
     """시세를 JSON 파일에서 불러옵니다."""
@@ -65,9 +70,14 @@ def load_prices():
 
 def save_prices():
     """시세를 JSON 파일에 저장하고 백업합니다."""
-    with open(prices_file, "w") as f:
-        json.dump(prices, f)
-    shutil.copy(prices_file, os.path.join(backup_dir, prices_file))
+    try:
+        with open(prices_file, "w") as f:
+            json.dump(prices, f)
+            f.flush()
+            os.fsync(f.fileno())
+        shutil.copy(prices_file, os.path.join(backup_dir, prices_file))
+    except Exception as e:
+        print(f'Error saving prices: {e}')
 
 def restore_backup():
     """백업에서 데이터를 복구합니다."""
@@ -155,7 +165,7 @@ async def show_inventory(interaction: discord.Interaction):
         cash_price = prices_info["현금 시세"]
         embed1.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
 
-  # Creatures 목록 추가 (두 번째 임베드)
+ # Creatures 목록 추가 (두 번째 임베드)
     for item in creatures[len(creatures)//2:]:
         quantity = inventory.get(item, "N/A")
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
@@ -186,8 +196,7 @@ async def sell_message(interaction: discord.Interaction):
         prices_info = prices.get(item, {"현금 시세": "N/A"})
         cash_price = prices_info["현금 시세"]
         if cash_price != "N/A":
-            display_price = float(cash_price) * 0.0001
-            display_price = f"{int(display_price)}.{str(display_price).split('.')[1][:2]}"
+            display_price = round(float(cash_price) * 0.0001, 2)
         else:
             display_price = "N/A"
         creatures_message += f"• {item.title()} {display_price}\n"
@@ -197,8 +206,7 @@ async def sell_message(interaction: discord.Interaction):
         prices_info = prices.get(item, {"현금 시세": "N/A"})
         cash_price = prices_info["현금 시세"]
         if cash_price != "N/A":
-            display_price = float(cash_price) * 0.0001
-            display_price = f"{int(display_price)}.{str(display_price).split('.')[1][:2]}"
+            display_price = round(float(cash_price) * 0.0001, 2)
         else:
             display_price = "N/A"
         items_message += f"• {item.title()} {display_price}\n"
@@ -207,6 +215,7 @@ async def sell_message(interaction: discord.Interaction):
     final_message = creatures_message + items_message + "\n• 문상 X  계좌 O\n• 구매를 원하시면 갠으로! \n• 재고는 갠디로 와서 물어봐주세요!"
     
     await interaction.response.send_message(final_message)
+
 # 환경 변수에서 토큰을 가져옵니다.
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 if TOKEN is None:
