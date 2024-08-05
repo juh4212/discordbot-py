@@ -6,6 +6,20 @@ import os
 # 데이터베이스 경로 설정
 db_path = os.path.join(os.path.dirname(__file__), 'bot_data.db')
 
+# 데이터베이스 초기화 함수
+def init_db():
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS inventory (
+                        item TEXT PRIMARY KEY,
+                        quantity INTEGER)''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS prices (
+                        item TEXT PRIMARY KEY,
+                        shoom_price INTEGER,
+                        cash_price INTEGER)''')
+    conn.commit()
+    conn.close()
+
 # 인텐트 설정
 intents = discord.Intents.default()
 intents.messages = True
@@ -23,20 +37,6 @@ creatures = [
     "voletexius", "whispthera", "woodralone", "yohsog"
 ]
 items = ["death gacha token", "revive token", "max growth token", "partial growth token", "strong glimmer token", "appearance change token"]
-
-# 데이터베이스 초기화 함수
-def init_db():
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    cursor.execute('''CREATE TABLE IF NOT EXISTS inventory (
-                        item TEXT PRIMARY KEY,
-                        quantity INTEGER)''')
-    cursor.execute('''CREATE TABLE IF NOT EXISTS prices (
-                        item TEXT PRIMARY KEY,
-                        shoom_price INTEGER,
-                        cash_price INTEGER)''')
-    conn.commit()
-    conn.close()
 
 # 데이터 로드 함수
 def load_inventory():
@@ -100,6 +100,8 @@ def save_prices(prices):
 async def on_ready():
     global inventory, prices
     try:
+        # 데이터베이스 초기화
+        init_db()
         inventory = load_inventory()
         prices = load_prices()
         print(f'Logged in as {bot.user.name}')
@@ -230,3 +232,4 @@ TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 if TOKEN is None:
     raise ValueError("DISCORD_BOT_TOKEN 환경 변수가 설정되지 않았습니다.")
 bot.run(TOKEN)
+
