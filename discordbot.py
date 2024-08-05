@@ -22,12 +22,7 @@ creatures = [
 items = ["death gacha token", "revive token", "max growth token", "partial growth token", "strong glimmer token", "appearance change token"]
 
 # SQLite 데이터베이스 초기화
-db_dir = os.getenv('BASE_DIR', 'data')
-db_file = os.path.join(db_dir, 'inventory.db')
-
-if not os.path.exists(db_dir):
-    os.makedirs(db_dir)
-
+db_file = os.path.join(os.getcwd(), "inventory.db")
 conn = sqlite3.connect(db_file)
 c = conn.cursor()
 c.execute('''CREATE TABLE IF NOT EXISTS inventory (
