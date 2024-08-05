@@ -22,7 +22,7 @@ creatures = [
 items = ["death gacha token", "revive token", "max growth token", "partial growth token", "strong glimmer token", "appearance change token"]
 
 # SQLite 데이터베이스 초기화
-db_file = os.path.join(os.getcwd(), "inventory.db")
+db_file = os.path.join(os.path.dirname(__file__), 'inventory.db')
 conn = sqlite3.connect(db_file)
 c = conn.cursor()
 c.execute('''CREATE TABLE IF NOT EXISTS inventory (
@@ -148,7 +148,7 @@ async def sell_message(interaction: discord.Interaction):
     creatures_message = "ㅡㅡ소나리아ㅡㅡ\n\n계좌로 팔아요!!\n\n<크리쳐>\n"
     items_message = "\n<아이템>\n"
 
-    # Creatures 목록 추가
+ # Creatures 목록 추가
     for item in creatures:
         prices_info = prices.get(item, {"현금 시세": "N/A"})
         cash_price = prices_info["현금 시세"]
