@@ -148,8 +148,10 @@ async def show_inventory(interaction: discord.Interaction):
     # 임베드 메시지를 디스코드에 전송
     await interaction.response.send_message(embeds=[embed1, embed2, embed3])
 
-# 봇 실행
-TOKEN = 'YOUR_BOT_TOKEN'  # 여기에 토큰을 넣으세요
+# 환경 변수에서 토큰을 가져옵니다.
+TOKEN = os.getenv('DISCORD_BOT_TOKEN')
+if TOKEN is None:
+    raise ValueError("DISCORD_BOT_TOKEN 환경 변수가 설정되지 않았습니다.")
 bot.run(TOKEN)
 
 
