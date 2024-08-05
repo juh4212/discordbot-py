@@ -162,10 +162,9 @@ async def show_inventory(interaction: discord.Interaction):
 async def sell_message(interaction: discord.Interaction):
     """판매 메시지를 생성합니다."""
     creatures_message = "ㅡㅡ소나리아ㅡㅡ\n\n계좌로 팔아요!!\n\n<크리쳐>\n"
-    items_message = "\n<아이입니다.
-<아이템>\n"
+    items_message = "\n<아이템>\n"
 
-    # Creatures 목록 추가
+   # Creatures 목록 추가
     for item in creatures:
         prices_info = prices.get(item, {"현금 시세": "N/A"})
         cash_price = prices_info["현금 시세"]
@@ -189,6 +188,4 @@ TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 if TOKEN is None:
     raise ValueError("DISCORD_BOT_TOKEN 환경 변수가 설정되지 않았습니다.")
 bot.run(TOKEN)
-
-
 
