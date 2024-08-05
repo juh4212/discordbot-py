@@ -3,8 +3,9 @@ from discord.ext import commands
 import sqlite3
 import os
 
-# 데이터베이스 설정
-conn = sqlite3.connect('bot_data.db')
+# 데이터베이스 설정 (절대 경로 사용)
+db_path = os.path.join(os.path.dirname(__file__), 'bot_data.db')
+conn = sqlite3.connect(db_path)
 cursor = conn.cursor()
 
 # 테이블 생성
@@ -38,35 +39,49 @@ items = ["death gacha token", "revive token", "max growth token", "partial growt
 
 # 데이터 로드 함수
 def load_inventory():
-    cursor.execute("SELECT * FROM inventory")
-    rows = cursor.fetchall()
-    inventory = {row[0]: row[1] for row in rows}
-    for item in creatures + items:
-        if item not in inventory:
-            inventory[item] = "N/A"
-    return inventory
+    try:
+        cursor.execute("SELECT * FROM inventory")
+        rows = cursor.fetchall()
+        inventory = {row[0]: row[1] for row in rows}
+        for item in creatures + items:
+            if item not in inventory:
+                inventory[item] = "N/A"
+        return inventory
+    except Exception as e:
+        print(f'Error loading inventory: {e}')
+        return {item: "N/A" for item in creatures + items}
 
 def save_inventory():
-    for item, quantity in inventory.items():
-        cursor.execute("REPLACE INTO inventory (item, quantity) VALUES (?, ?)", (item, quantity))
-    conn.commit()
-    print("Inventory saved successfully")
+    try:
+        for item, quantity in inventory.items():
+            cursor.execute("REPLACE INTO inventory (item, quantity) VALUES (?, ?)", (item, quantity))
+        conn.commit()
+        print("Inventory saved successfully")
+    except Exception as e:
+        print(f'Error saving inventory: {e}')
 
 def load_prices():
-    cursor.execute("SELECT * FROM prices")
-    rows = cursor.fetchall()
-    prices = {row[0]: {"슘 시세": row[1], "현금 시세": row[2]} for row in rows}
-    for item in creatures + items:
-        if item not in prices:
-            prices[item] = {"슘 시세": "N/A", "현금 시세": "N/A"}
-    return prices
+    try:
+        cursor.execute("SELECT * FROM prices")
+        rows = cursor.fetchall()
+        prices = {row[0]: {"슘 시세": row[1], "현금 시세": row[2]} for row in rows}
+        for item in creatures + items:
+            if item not in prices:
+                prices[item] = {"슘 시세": "N/A", "현금 시세": "N/A"}
+        return prices
+    except Exception as e:
+        print(f'Error loading prices: {e}')
+        return {item: {"슘 시세": "N/A", "현금 시세": "N/A"} for item in creatures + items}
 
 def save_prices():
-    for item, price in prices.items():
-        cursor.execute("REPLACE INTO prices (item, shoom_price, cash_price) VALUES (?, ?, ?)",
-                       (item, price["슘 시세"], price["현금 시세"]))
-    conn.commit()
-    print("Prices saved successfully")
+    try:
+        for item, price in prices.items():
+            cursor.execute("REPLACE INTO prices (item, shoom_price, cash_price) VALUES (?, ?, ?)",
+                           (item, price["슘 시세"], price["현금 시세"]))
+        conn.commit()
+        print("Prices saved successfully")
+    except Exception as e:
+        print(f'Error saving prices: {e}')
 
 @bot.event
 async def on_ready():
@@ -138,7 +153,7 @@ async def show_inventory(interaction: discord.Interaction):
     embed2 = discord.Embed(title="현재 재고 목록 (Creatures Part 2)", color=discord.Color.blue())
     embed3 = discord.Embed(title="현재 재고 목록 (Items)", color=discord.Color.green())
 
-    # Creatures 목록 추가 (첫 번째 임베드)
+ # Creatures 목록 추가 (첫 번째 임베드)
     for item in creatures[:len(creatures)//2]:
         quantity = inventory.get(item, "N/A")
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
@@ -153,6 +168,7 @@ async def show_inventory(interaction: discord.Interaction):
         shoom_price = prices_info["슘 시세"]
         cash_price = prices_info["현금 시세"]
         embed2.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
+
     # Items 목록 추가 (세 번째 임베드)
     for item in items:
         quantity = inventory.get(item, "N/A")
