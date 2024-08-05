@@ -21,8 +21,8 @@ prices = {item: {"슘 시세": "N/A", "현금 시세": "N/A"} for item in creatu
 inventory = {item: "N/A" for item in creatures + items}
 
 # 재고 파일 경로
-inventory_file = "/app/data/inventory.json"
-prices_file = "/app/data/prices.json"
+inventory_file = "inventory.json"
+prices_file = "prices.json"
 
 def load_inventory():
     """재고를 JSON 파일에서 불러옵니다."""
