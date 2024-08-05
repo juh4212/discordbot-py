@@ -21,11 +21,13 @@ creatures = [
 ]
 items = ["death gacha token", "revive token", "max growth token", "partial growth token", "strong glimmer token", "appearance change token"]
 
-# 데이터베이스 파일 경로 설정
-BASE_DIR = os.getenv('BASE_DIR', '.')
-db_file = os.path.join(BASE_DIR, 'inventory.db')
-
 # SQLite 데이터베이스 초기화
+db_dir = os.getenv('BASE_DIR', 'data')
+db_file = os.path.join(db_dir, 'inventory.db')
+
+if not os.path.exists(db_dir):
+    os.makedirs(db_dir)
+
 conn = sqlite3.connect(db_file)
 c = conn.cursor()
 c.execute('''CREATE TABLE IF NOT EXISTS inventory (
@@ -133,7 +135,7 @@ async def show_inventory(interaction: discord.Interaction):
         cash_price = prices_info["현금 시세"]
         embed2.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
 
-  # Items 목록 추가 (세 번째 임베드)
+    # Items 목록 추가 (세 번째 임베드)
     for item in items:
         quantity = inventory.get(item, "N/A")
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
