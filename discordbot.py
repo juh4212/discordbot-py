@@ -2,11 +2,12 @@ import discord
 from discord.ext import commands
 import json
 import os
+import shutil
 
 # 인텐트 설정
 intents = discord.Intents.default()
 intents.messages = True
-intents.message_content = True  # 메시지 콘텐츠 접근 권한 추가
+intents.message_content = True
 
 # 봇과의 상호작용을 위한 객체 생성
 bot = commands.Bot(command_prefix='!', intents=intents)
@@ -30,6 +31,11 @@ inventory = {item: "N/A" for item in creatures + items}
 # 재고 파일 경로
 inventory_file = "inventory.json"
 prices_file = "prices.json"
+backup_dir = "backup"
+
+# 백업 디렉토리 생성
+if not os.path.exists(backup_dir):
+    os.makedirs(backup_dir)
 
 def load_inventory():
     """재고를 JSON 파일에서 불러옵니다."""
@@ -44,9 +50,10 @@ def load_inventory():
         return {item: "N/A" for item in creatures + items}
 
 def save_inventory():
-    """재고를 JSON 파일에 저장합니다."""
+    """재고를 JSON 파일에 저장하고 백업합니다."""
     with open(inventory_file, "w") as f:
         json.dump(inventory, f)
+    shutil.copy(inventory_file, os.path.join(backup_dir, inventory_file))
 
 def load_prices():
     """시세를 JSON 파일에서 불러옵니다."""
@@ -57,14 +64,23 @@ def load_prices():
         return {item: {"슘 시세": "N/A", "현금 시세": "N/A"} for item in creatures + items}
 
 def save_prices():
-    """시세를 JSON 파일에 저장합니다."""
+    """시세를 JSON 파일에 저장하고 백업합니다."""
     with open(prices_file, "w") as f:
         json.dump(prices, f)
+    shutil.copy(prices_file, os.path.join(backup_dir, prices_file))
+
+def restore_backup():
+    """백업에서 데이터를 복구합니다."""
+    if os.path.exists(os.path.join(backup_dir, inventory_file)):
+        shutil.copy(os.path.join(backup_dir, inventory_file), inventory_file)
+    if os.path.exists(os.path.join(backup_dir, prices_file)):
+        shutil.copy(os.path.join(backup_dir, prices_file), prices_file)
 
 @bot.event
 async def on_ready():
     global inventory, prices
     try:
+        restore_backup()  # 백업에서 데이터 복구
         inventory = load_inventory()
         prices = load_prices()
         print(f'Logged in as {bot.user.name}')
@@ -139,7 +155,7 @@ async def show_inventory(interaction: discord.Interaction):
         cash_price = prices_info["현금 시세"]
         embed1.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
 
-    # Creatures 목록 추가 (두 번째 임베드)
+  # Creatures 목록 추가 (두 번째 임베드)
     for item in creatures[len(creatures)//2:]:
         quantity = inventory.get(item, "N/A")
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
@@ -165,7 +181,7 @@ async def sell_message(interaction: discord.Interaction):
     creatures_message = "ㅡㅡ소나리아ㅡㅡ\n\n계좌로 팔아요!!\n\n<크리쳐>\n"
     items_message = "\n<아이템>\n"
 
-   # Creatures 목록 추가
+    # Creatures 목록 추가
     for item in creatures:
         prices_info = prices.get(item, {"현금 시세": "N/A"})
         cash_price = prices_info["현금 시세"]
@@ -189,4 +205,3 @@ TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 if TOKEN is None:
     raise ValueError("DISCORD_BOT_TOKEN 환경 변수가 설정되지 않았습니다.")
 bot.run(TOKEN)
-
