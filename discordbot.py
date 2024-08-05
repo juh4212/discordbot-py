@@ -126,36 +126,29 @@ async def update_price(interaction: discord.Interaction, item: str, shoom_price:
 @bot.tree.command(name='inventory', description='Show the current inventory with prices.')
 async def show_inventory(interaction: discord.Interaction):
     """현재 재고를 카테고리별로 임베드 형태로 표시합니다."""
-    embed1 = discord.Embed(title="현재 재고 목록 (Creatures Part 1)", color=discord.Color.blue())
-    embed2 = discord.Embed(title="현재 재고 목록 (Creatures Part 2)", color=discord.Color.blue())
-    embed3 = discord.Embed(title="현재 재고 목록 (Items)", color=discord.Color.green())
+    creatures_message = "ㅡㅡ소나리아ㅡㅡ\n\n계좌로 팔아요!!\n\n<크리쳐>\n"
+    items_message = "\n<아이템>\n"
 
-    # Creatures 목록 추가 (첫 번째 임베드)
-    for item in creatures[:len(creatures)//2]:
+    # Creatures 목록 추가
+    for item in creatures:
         quantity = inventory.get(item, "N/A")
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
-        shoom_price = prices_info["슘 시세"]
         cash_price = prices_info["현금 시세"]
-        embed1.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
+        display_price = float(cash_price) * 0.0001 if cash_price != "N/A" else "N/A"
+        creatures_message += f"• {item.title()} {display_price}\n"
 
-    # Creatures 목록 추가 (두 번째 임베드)
-    for item in creatures[len(creatures)//2:]:
-        quantity = inventory.get(item, "N/A")
-        prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
-        shoom_price = prices_info["슘 시세"]
-        cash_price = prices_info["현금 시세"]
-        embed2.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
-
-    # Items 목록 추가 (세 번째 임베드)
+    # Items 목록 추가
     for item in items:
         quantity = inventory.get(item, "N/A")
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
-        shoom_price = prices_info["슘 시세"]
         cash_price = prices_info["현금 시세"]
-        embed3.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
+        display_price = float(cash_price) * 0.0001 if cash_price != "N/A" else "N/A"
+        items_message += f"• {item.title()} {display_price}\n"
 
-    # 임베드 메시지를 디스코드에 전송
-    await interaction.response.send_message(embeds=[embed1, embed2, embed3])
+    # 필수 메시지 추가
+    final_message = creatures_message + items_message + "\n• 문상 X  계좌 O\n• 구매를 원하시면 갠으로! \n• 재고는 갠디로 와서 물어봐주세요!"
+    
+    await interaction.response.send_message(final_message)
 
 # 환경 변수에서 토큰을 가져옵니다.
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
