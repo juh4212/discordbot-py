@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-import json
+import sqlite3
 import os
 
 # 인텐트 설정
@@ -25,49 +25,75 @@ items = [
     "strong glimmer token", "appearance change token"
 ]
 
-# 시세 및 재고 초기화
-prices = {item: {"슘 시세": "N/A", "현금 시세": "N/A"} for item in creatures + items}
-inventory = {item: "N/A" for item in creatures + items}
-
 # 현재 파일 경로
 current_path = os.path.dirname(os.path.abspath(__file__))
-data_path = os.path.join(current_path, "data")
-inventory_file = os.path.join(data_path, "inventory.json")
-prices_file = os.path.join(data_path, "prices.json")
+db_path = os.path.join(current_path, "data", "inventory_prices.db")
 
-# 데이터 폴더가 없으면 생성
-if not os.path.exists(data_path):
-    os.makedirs(data_path)
+# 데이터베이스 초기화
+def init_db():
+    if not os.path.exists(os.path.dirname(db_path)):
+        os.makedirs(os.path.dirname(db_path))
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS inventory (
+            item TEXT PRIMARY KEY,
+            quantity INTEGER
+        )
+    ''')
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS prices (
+            item TEXT PRIMARY KEY,
+            shoom_price INTEGER,
+            cash_price REAL
+        )
+    ''')
+    conn.commit()
+    conn.close()
 
 def load_inventory():
-    """재고를 JSON 파일에서 불러옵니다."""
-    if os.path.exists(inventory_file):
-        with open(inventory_file, "r") as f:
-            return json.load(f)
-    else:
-        return {item: "N/A" for item in creatures + items}
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    c.execute('SELECT * FROM inventory')
+    inventory = {row[0]: row[1] for row in c.fetchall()}
+    for item in creatures + items:
+        if item not in inventory:
+            inventory[item] = "N/A"
+    conn.close()
+    return inventory
 
-def save_inventory():
-    """재고를 JSON 파일에 저장합니다."""
-    with open(inventory_file, "w") as f:
-        json.dump(inventory, f)
+def save_inventory(inventory):
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    for item, quantity in inventory.items():
+        c.execute('INSERT OR REPLACE INTO inventory (item, quantity) VALUES (?, ?)', (item, quantity))
+    conn.commit()
+    conn.close()
 
 def load_prices():
-    """시세를 JSON 파일에서 불러옵니다."""
-    if os.path.exists(prices_file):
-        with open(prices_file, "r") as f:
-            return json.load(f)
-    else:
-        return {item: {"슘 시세": "N/A", "현금 시세": "N/A"} for item in creatures + items}
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    c.execute('SELECT * FROM prices')
+    prices = {row[0]: {"슘 시세": row[1], "현금 시세": row[2]} for row in c.fetchall()}
+    for item in creatures + items:
+        if item not in prices:
+            prices[item] = {"슘 시세": "N/A", "현금 시세": "N/A"}
+    conn.close()
+    return prices
 
-def save_prices():
-    """시세를 JSON 파일에 저장합니다."""
-    with open(prices_file, "w") as f:
-        json.dump(prices, f)
+def save_prices(prices):
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    for item, price in prices.items():
+        c.execute('INSERT OR REPLACE INTO prices (item, shoom_price, cash_price) VALUES (?, ?, ?)',
+                  (item, price["슘 시세"], price["현금 시세"]))
+    conn.commit()
+    conn.close()
 
 @bot.event
 async def on_ready():
     global inventory, prices
+    init_db()
     inventory = load_inventory()
     prices = load_prices()
     print(f'Logged in as {bot.user.name}')
@@ -90,7 +116,7 @@ async def add_item(interaction: discord.Interaction, item: str, quantity: int):
         if inventory[item] == "N/A":
             inventory[item] = 0
         inventory[item] += quantity
-        save_inventory()
+        save_inventory(inventory)
         await interaction.response.send_message(f'아이템 "{item}"이(가) {quantity}개 추가되었습니다.')
     else:
         await interaction.response.send_message(f'아이템 "{item}"은(는) 사용할 수 없는 아이템입니다.')
@@ -103,7 +129,7 @@ async def remove_item(interaction: discord.Interaction, item: str, quantity: int
     if item in inventory and inventory[item] != "N/A":
         if inventory[item] >= quantity:
             inventory[item] -= quantity
-            save_inventory()
+            save_inventory(inventory)
             await interaction.response.send_message(f'아이템 "{item}"이(가) {quantity}개 제거되었습니다.')
         else:
             await interaction.response.send_message(f'아이템 "{item}"의 재고가 부족합니다.')
@@ -118,7 +144,7 @@ async def update_price(interaction: discord.Interaction, item: str, shoom_price:
     if item in prices:
         prices[item]["슘 시세"] = shoom_price
         prices[item]["현금 시세"] = shoom_price * 0.7
-        save_prices()
+        save_prices(prices)
         await interaction.response.send_message(f'아이템 "{item}"의 시세가 슘 시세: {shoom_price}슘, 현금 시세: {shoom_price * 0.7}원으로 업데이트되었습니다.')
     else:
         await interaction.response.send_message(f'아이템 "{item}"은(는) 사용할 수 없는 아이템입니다.')
@@ -131,21 +157,21 @@ async def show_inventory(interaction: discord.Interaction):
     embed3 = discord.Embed(title="현재 재고 목록 (Items)", color=discord.Color.green())
 
     for item in creatures[:len(creatures)//2]:
-        quantity = inventory[item]
+        quantity = inventory.get(item, "N/A")
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
         shoom_price = prices_info["슘 시세"]
         cash_price = prices_info["현금 시세"]
         embed1.add_field(name=item, value=f"재고: {quantity}\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
 
     for item in creatures[len(creatures)//2:]:
-        quantity = inventory[item]
+        quantity = inventory.get(item, "N/A")
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
         shoom_price = prices_info["슘 시세"]
         cash_price = prices_info["현금 시세"]
         embed2.add_field(name=item, value=f"재고: {quantity}\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
 
     for item in items:
-        quantity = inventory[item]
+        quantity = inventory.get(item, "N/A")
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
         shoom_price = prices_info["슘 시세"]
         cash_price = prices_info["현금 시세"]
@@ -156,6 +182,7 @@ async def show_inventory(interaction: discord.Interaction):
 # 봇 실행
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 bot.run(TOKEN)
+
 
 
 
