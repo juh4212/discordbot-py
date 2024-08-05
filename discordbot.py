@@ -48,14 +48,20 @@ def load_prices():
     return prices
 
 # 재고 파일에 저장
-def save_inventory(inventory):
-    with open(inventory_file, 'w', encoding='utf-8') as f:
-        json.dump(inventory, f, ensure_ascii=False, indent=4)
+def save_inventory():
+    try:
+        with open(inventory_file, 'w', encoding='utf-8') as f:
+            json.dump(inventory, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        print(f"Failed to save inventory: {e}")
 
 # 시세 파일에 저장
-def save_prices(prices):
-    with open(prices_file, 'w', encoding='utf-8') as f:
-        json.dump(prices, f, ensure_ascii=False, indent=4)
+def save_prices():
+    try:
+        with open(prices_file, 'w', encoding='utf-8') as f:
+            json.dump(prices, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        print(f"Failed to save prices: {e}")
 
 @bot.event
 async def on_ready():
@@ -82,7 +88,7 @@ async def add_item(interaction: discord.Interaction, item: str, quantity: int):
         if inventory[item] == "N/A":
             inventory[item] = 0
         inventory[item] += quantity
-        save_inventory(inventory)
+        save_inventory()
         await interaction.response.send_message(f'아이템 "{item}"이(가) {quantity}개 추가되었습니다.')
     else:
         await interaction.response.send_message(f'아이템 "{item}"은(는) 사용할 수 없는 아이템입니다.')
@@ -95,7 +101,7 @@ async def remove_item(interaction: discord.Interaction, item: str, quantity: int
     if item in inventory and inventory[item] != "N/A":
         if inventory[item] >= quantity:
             inventory[item] -= quantity
-            save_inventory(inventory)
+            save_inventory()
             await interaction.response.send_message(f'아이템 "{item}"이(가) {quantity}개 제거되었습니다.')
         else:
             await interaction.response.send_message(f'아이템 "{item}"의 재고가 부족합니다.')
@@ -110,7 +116,7 @@ async def update_price(interaction: discord.Interaction, item: str, shoom_price:
     if item in prices:
         prices[item]["슘 시세"] = shoom_price
         prices[item]["현금 시세"] = shoom_price * 0.7
-        save_prices(prices)
+        save_prices()
         await interaction.response.send_message(f'아이템 "{item}"의 시세가 슘 시세: {shoom_price}슘, 현금 시세: {shoom_price * 0.7}원으로 업데이트되었습니다.')
     else:
         await interaction.response.send_message(f'아이템 "{item}"은(는) 사용할 수 없는 아이템입니다.')
@@ -127,26 +133,25 @@ async def show_inventory(interaction: discord.Interaction):
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
         shoom_price = prices_info["슘 시세"]
         cash_price = prices_info["현금 시세"]
-        embed1.add_field(name=item, value=f"재고: {quantity}\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
+        embed1.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
 
     for item in creatures[len(creatures)//2:]:
         quantity = inventory.get(item, "N/A")
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
         shoom_price = prices_info["슘 시세"]
         cash_price = prices_info["현금 시세"]
-        embed2.add_field(name=item, value=f"재고: {quantity}\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
+        embed2.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
 
     for item in items:
         quantity = inventory.get(item, "N/A")
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
         shoom_price = prices_info["슘 시세"]
         cash_price = prices_info["현금 시세"]
-        embed3.add_field(name=item, value=f"재고: {quantity}\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
+        embed3.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
 
     await interaction.response.send_message(embeds=[embed1, embed2, embed3])
 
 # 봇 실행
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 bot.run(TOKEN)
-
 
