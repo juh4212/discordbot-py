@@ -1,11 +1,10 @@
 import discord
 from discord.ext import commands
-import json
+import shelve
 import os
 
 # 데이터베이스 파일 경로 설정
-inventory_file_path = os.path.join(os.path.dirname(__file__), 'inventory.json')
-prices_file_path = os.path.join(os.path.dirname(__file__), 'prices.json')
+db_path = os.path.join(os.path.dirname(__file__), 'bot_data.db')
 
 # 고정된 아이템 목록
 creatures = [
@@ -19,11 +18,8 @@ items = ["death gacha token", "revive token", "max growth token", "partial growt
 
 def load_inventory():
     try:
-        if os.path.exists(inventory_file_path):
-            with open(inventory_file_path, 'r') as file:
-                inventory = json.load(file)
-        else:
-            inventory = {item: "N/A" for item in creatures + items}
+        with shelve.open(db_path) as db:
+            inventory = db.get('inventory', {item: "N/A" for item in creatures + items})
         return inventory
     except Exception as e:
         print(f'Error loading inventory: {e}')
@@ -31,19 +27,16 @@ def load_inventory():
 
 def save_inventory(inventory):
     try:
-        with open(inventory_file_path, 'w') as file:
-            json.dump(inventory, file, indent=4)
+        with shelve.open(db_path) as db:
+            db['inventory'] = inventory
         print("Inventory saved successfully")
     except Exception as e:
         print(f'Error saving inventory: {e}')
 
 def load_prices():
     try:
-        if os.path.exists(prices_file_path):
-            with open(prices_file_path, 'r') as file:
-                prices = json.load(file)
-        else:
-            prices = {item: {'슘 시세': 'N/A', '현금 시세': 'N/A'} for item in creatures + items}
+        with shelve.open(db_path) as db:
+            prices = db.get('prices', {item: {'슘 시세': 'N/A', '현금 시세': 'N/A'} for item in creatures + items})
         return prices
     except Exception as e:
         print(f'Error loading prices: {e}')
@@ -51,8 +44,8 @@ def load_prices():
 
 def save_prices(prices):
     try:
-        with open(prices_file_path, 'w') as file:
-            json.dump(prices, file, indent=4)
+        with shelve.open(db_path) as db:
+            db['prices'] = prices
         print("Prices saved successfully")
     except Exception as e:
         print(f'Error saving prices: {e}')
