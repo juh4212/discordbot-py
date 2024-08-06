@@ -38,18 +38,24 @@ creatures = [
 ]
 items = ["death gacha token", "revive token", "max growth token", "partial growth token", "strong glimmer token", "appearance change token"]
 
-# 데이터 로드 함수
 def load_inventory():
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM inventory")
-    rows = cursor.fetchall()
-    inventory = {row[0]: row[1] for row in rows}
-    for item in creatures + items:
-        if item not in inventory:
-            inventory[item] = 0
-    conn.close()
-    return inventory
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM inventory")
+        rows = cursor.fetchall()
+        if not rows:
+            print("No data found in the inventory table.")
+        inventory = {row[0]: row[1] for row in rows}
+        for item in creatures + items:
+            if item not in inventory:
+                inventory[item] = "N/A"
+                print(f"No inventory data for {item}. Defaulting to 'N/A'.")
+        conn.close()
+        return inventory
+    except Exception as e:
+        print(f'Error loading inventory: {e}')
+        return {item: "N/A" for item in creatures + items}
 
 def save_inventory(inventory):
     conn = sqlite3.connect(db_path)
@@ -60,16 +66,24 @@ def save_inventory(inventory):
     conn.close()
 
 def load_prices():
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM prices")
-    rows = cursor.fetchall()
-    prices = {row[0]: {'슘 시세': row[1], '현금 시세': row[2]} for row in rows}
-    for item in creatures + items:
-        if item not in prices:
-            prices[item] = {'슘 시세': 'N/A', '현금 시세': 'N/A'}
-    conn.close()
-    return prices
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM prices")
+        rows = cursor.fetchall()
+        if not rows:
+            print("No data found in the prices table.")
+        prices = {row[0]: {'슘 시세': row[1], '현금 시세': row[2]} for row in rows}
+        for item in creatures + items:
+            if item not in prices:
+                prices[item] = {'슘 시세': 'N/A', '현금 시세': 'N/A'}
+                print(f"No pricing data for {item}. Defaulting to 'N/A'.")
+        conn.close()
+        return prices
+    except Exception as e:
+        print(f'Error loading prices: {e}')
+        return {item: {'슘 시세': 'N/A', '현금 시세': 'N/A'} for item in creatures + items}
+
 
 def save_prices(prices):
     conn = sqlite3.connect(db_path)
@@ -82,11 +96,14 @@ def save_prices(prices):
 @bot.event
 async def on_ready():
     global inventory, prices
-    init_db()
-    inventory = load_inventory()
-    prices = load_prices()
-    print(f'Logged in as {bot.user.name}')
-    await bot.tree.sync()  # 슬래시 커맨드를 디스코드와 동기화합니다.
+    try:
+        init_db()
+        inventory = load_inventory()
+        prices = load_prices()
+        print(f'Logged in as {bot.user.name} - Inventory and prices loaded.')
+        await bot.tree.sync()
+    except Exception as e:
+        print(f'Error in on_ready: {e}')
 
 # 자동 완성 기능 구현
 async def autocomplete_items(interaction: discord.Interaction, current: str):
