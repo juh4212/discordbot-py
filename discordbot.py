@@ -59,46 +59,15 @@ def save_inventory(inventory):
     conn.commit()
     conn.close()
 
-def load_prices():
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM prices")
-    rows = cursor.fetchall()
-    prices = {row[0]: {'슘 시세': row[1], '현금 시세': row[2]} for row in rows}
-    for item in creatures + items:
-        if item not in prices:
-            prices[item] = {'슘 시세': 'N/A', '현금 시세': 'N/A'}
-    conn.close()
-    return prices
-
-def save_prices(prices):
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    for item, price in prices.items():
-        cursor.execute("REPLACE INTO prices (item, shoom_price, cash_price) VALUES (?, ?, ?)", (item, price['슘 시세'], price['현금 시세']))
-    conn.commit()
-    conn.close()
-
-@bot.event
-async def on_ready():
-    global inventory, prices
-    init_db()
-    inventory = load_inventory()
-    prices = load_prices()
-    print(f'Logged in as {bot.user.name}')
-    await bot.tree.sync()  # 슬래시 커맨드를 디스코드와 동기화합니다.
-
-@bot.tree.command(name='inventory', description='Show the current inventory with prices.')
-async def show_inventory(interaction: discord.Interaction):
-    embed = discord.Embed(title="Inventory Overview", color=discord.Color.blue())
-    for item, count in inventory.items():
-        price_info = prices.get(item, {'슘 시세': 'N/A', '현금 시세': 'N/A'})
-        embed.add_field(name=item, value=f"Count: {count}, Price: {price_info['슘 시세']}슘 / {price_info['현금 시세']}원", inline=False)
-    await interaction.response.send_message(embed=embed)
+# 자동 완성 기능 구현
+async def autocomplete_items(interaction: discord.Interaction, current: str):
+    all_items = creatures + items
+    return [discord.app_commands.Choice(name=item, value=item) for item in all_items if current.lower() in item.lower()]
 
 # 슬래시 커맨드: 아이템 추가
 @bot.tree.command(name='add', description='Add items to the inventory.')
 @discord.app_commands.describe(item='The item to add', quantity='The quantity to add')
+@discord.app_commands.autocomplete(item=autocomplete_items)
 async def add_item(interaction: discord.Interaction, item: str, quantity: int):
     if item in inventory:
         inventory[item] = int(inventory[item]) + quantity if inventory[item] != "N/A" else quantity
@@ -110,6 +79,7 @@ async def add_item(interaction: discord.Interaction, item: str, quantity: int):
 # 슬래시 커맨드: 아이템 제거
 @bot.tree.command(name='remove', description='Remove items from the inventory.')
 @discord.app_commands.describe(item='The item to remove', quantity='The quantity to remove')
+@discord.app_commands.autocomplete(item=autocomplete_items)
 async def remove_item(interaction: discord.Interaction, item: str, quantity: int):
     if item in inventory and inventory[item] != "N/A" and int(inventory[item]) >= quantity:
         inventory[item] = int(inventory[item]) - quantity
