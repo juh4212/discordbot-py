@@ -173,7 +173,7 @@ async def sell_message(interaction: discord.Interaction):
         cash_price = prices_info["현금 시세"]
         if cash_price != "N/A":
             display_price = round(float(cash_price) * 0.0001, 2)
-        else {
+        else:
             display_price = "N/A"
         creatures_message += f"• {item.title()} {display_price}\n"
 
@@ -183,7 +183,7 @@ async def sell_message(interaction: discord.Interaction):
         cash_price = prices_info["현금 시세"]
         if cash_price != "N/A":
             display_price = round(float(cash_price) * 0.0001, 2)
-        else {
+        else:
             display_price = "N/A"
         items_message += f"• {item.title()} {display_price}\n"
 
