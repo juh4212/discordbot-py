@@ -50,7 +50,7 @@ def job():
     update_database(creature_data)
 
 # 매일 오전 9시에 작업 수행
-schedule.every().day.at("09:00").do(job)
+schedule.every().day.at("22:45").do(job)
 
 # Discord 봇 설정
 intents = discord.Intents.default()
