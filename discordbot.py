@@ -45,9 +45,6 @@ def load_inventory():
     cursor.execute("SELECT * FROM inventory")
     rows = cursor.fetchall()
     inventory = {row[0]: row[1] for row in rows}
-    for item in creatures + items:
-        if item not in inventory:
-            inventory[item] = "N/A"
     conn.close()
     return inventory
 
@@ -65,9 +62,6 @@ def load_prices():
     cursor.execute("SELECT * FROM prices")
     rows = cursor.fetchall()
     prices = {row[0]: {'슘 시세': row[1], '현금 시세': row[2]} for row in rows}
-    for item in creatures + items:
-        if item not in prices:
-            prices[item] = {'슘 시세': 'N/A', '현금 시세': 'N/A'}
     conn.close()
     return prices
 
