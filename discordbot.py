@@ -230,31 +230,21 @@ async def sell_message(interaction: discord.Interaction):
 # 슬래시 커맨드: 크리쳐 목록 불러오기
 @bot.tree.command(name='load_list', description='Load the creature prices from the website.')
 async def load_list(interaction: discord.Interaction):
+    await interaction.response.defer()  # Interaction이 시작되었음을 Discord에 알림
     creature_data = fetch_creature_prices()
     if creature_data:
         update_database(creature_data)
         # prices 컬렉션을 갱신합니다.
         for creature in creature_data:
             prices_collection.update_one({'item': creature['name']}, {'$set': {'shoom_price': creature['value']}}, upsert=True)
-        await interaction.response.send_message("Creature prices have been loaded and updated successfully.")
+        await interaction.followup.send("Creature prices have been loaded and updated successfully.")
     else:
-        await interaction.response.send_message("Failed to load creature prices from the website.")
+        await interaction.followup.send("Failed to load creature prices from the website.")
 
 # 슬래시 명령어를 추가하기 위해 bot에 명령어를 등록
 async def setup_slash_commands():
     await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
     print(f'Slash commands synced for guild ID: {GUILD_ID}')
-
-@bot.event
-async def on_ready():
-    global inventory, prices
-    try:
-        inventory = load_inventory()
-        prices = load_prices()
-        print(f'Logged in as {bot.user.name} - Inventory and prices loaded.')
-        await setup_slash_commands()
-    except Exception as e:
-        print(f'Error in on_ready: {e}')
 
 # 모든 기능 실행
 if __name__ == '__main__':
