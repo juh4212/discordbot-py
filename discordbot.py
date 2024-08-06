@@ -1,48 +1,72 @@
 import discord
 from discord.ext import commands
+import mysql.connector
 import os
 
-# 데이터베이스 파일 경로 설정
-inventory_file_path = os.path.join(os.path.dirname(__file__), 'inventory.txt')
-prices_file_path = os.path.join(os.path.dirname(__file__), 'prices.txt')
+# MySQL 데이터베이스 설정
+db_config = {
+    'user': 'your_username',
+    'password': 'your_password',
+    'host': 'your_host',
+    'database': 'your_database'
+}
 
-# 고정된 아이템 목록
-creatures = [
-    "angelic warden", "aolenus", "ardor warden", "boreal warden", "caldonterrus", "corsarlett", 
-    "eigion warden", "ghartokus", "golgaroth", "hellion warden", "jhiggo jangl", "jotunhel", 
-    "luxces", "lus adarch", "magnacetus", "menace", "mijusuima", "nolumoth", "pacedegon", 
-    "parahexilian", "sang toare", "takamorath", "umbraxi", "urzuk", "verdent warden", 
-    "voletexius", "whispthera", "woodralone", "yohsog"
-]
-items = ["death gacha token", "revive token", "max growth token", "partial growth token", "strong glimmer token", "appearance change token"]
+def create_tables():
+    conn = mysql.connector.connect(**db_config)
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS inventory (
+                        item VARCHAR(255) PRIMARY KEY,
+                        quantity INTEGER)''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS prices (
+                        item VARCHAR(255) PRIMARY KEY,
+                        shoom_price INTEGER,
+                        cash_price FLOAT)''')
+    conn.commit()
+    cursor.close()
+    conn.close()
 
 def load_inventory():
     inventory = {item: "N/A" for item in creatures + items}
-    if os.path.exists(inventory_file_path):
-        with open(inventory_file_path, 'r') as file:
-            for line in file:
-                item, quantity = line.strip().split(':')
-                inventory[item] = quantity
+    conn = mysql.connector.connect(**db_config)
+    cursor = conn.cursor()
+    cursor.execute("SELECT item, quantity FROM inventory")
+    rows = cursor.fetchall()
+    for row in rows:
+        inventory[row[0]] = row[1]
+    cursor.close()
+    conn.close()
     return inventory
 
 def save_inventory(inventory):
-    with open(inventory_file_path, 'w') as file:
-        for item, quantity in inventory.items():
-            file.write(f"{item}:{quantity}\n")
+    conn = mysql.connector.connect(**db_config)
+    cursor = conn.cursor()
+    for item, quantity in inventory.items():
+        cursor.execute("REPLACE INTO inventory (item, quantity) VALUES (%s, %s)", (item, quantity))
+    conn.commit()
+    cursor.close()
+    conn.close()
 
 def load_prices():
     prices = {item: {'슘 시세': 'N/A', '현금 시세': 'N/A'} for item in creatures + items}
-    if os.path.exists(prices_file_path):
-        with open(prices_file_path, 'r') as file:
-            for line in file:
-                item, shoom_price, cash_price = line.strip().split(':')
-                prices[item] = {'슘 시세': shoom_price, '현금 시세': cash_price}
+    conn = mysql.connector.connect(**db_config)
+    cursor = conn.cursor()
+    cursor.execute("SELECT item, shoom_price, cash_price FROM prices")
+    rows = cursor.fetchall()
+    for row in rows:
+        prices[row[0]] = {'슘 시세': row[1], '현금 시세': row[2]}
+    cursor.close()
+    conn.close()
     return prices
 
 def save_prices(prices):
-    with open(prices_file_path, 'w') as file:
-        for item, price in prices.items():
-            file.write(f"{item}:{price['슘 시세']}:{price['현금 시세']}\n")
+    conn = mysql.connector.connect(**db_config)
+    cursor = conn.cursor()
+    for item, price in prices.items():
+        cursor.execute("REPLACE INTO prices (item, shoom_price, cash_price) VALUES (%s, %s, %s)", 
+                       (item, price['슘 시세'], price['현금 시세']))
+    conn.commit()
+    cursor.close()
+    conn.close()
 
 # 인텐트 설정
 intents = discord.Intents.default()
@@ -56,6 +80,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 async def on_ready():
     global inventory, prices
     try:
+        create_tables()
         inventory = load_inventory()
         prices = load_prices()
         print(f'Logged in as {bot.user.name} - Inventory and prices loaded.')
