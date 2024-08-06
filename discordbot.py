@@ -1,8 +1,96 @@
+import os
+import requests
+from bs4 import BeautifulSoup
+from pymongo import MongoClient
+import re
+import schedule
+import time
 import discord
 from discord.ext import commands
-import os
-from pymongo import MongoClient
-import json
+
+# MongoDB 연결 설정
+MONGODB_URI = os.getenv('MONGODB_URI')
+client = MongoClient(MONGODB_URI, tls=True, tlsAllowInvalidCertificates=True)
+db = client.creatures_db
+
+# 크리쳐 가격 정보를 웹 스크래핑하는 함수
+def fetch_creature_prices():
+    url = 'https://www.game.guide/creatures-of-sonaria-value-list'
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    creature_data = []
+
+    table = soup.find('table')
+    rows = table.find_all('tr')[1:]
+
+    for row in rows:
+        cols = row.find_all('td')
+        name = cols[0].text.strip().lower()
+        value = cols[1].text.strip().lower()
+        
+        if '~' in value:
+            range_values = re.findall(r'\d+', value)
+            median_value = (int(range_values[0]) + int(range_values[1])) / 2
+            value = f"{median_value}k"
+        
+        creature_data.append({"name": name, "value": value})
+
+    return creature_data
+
+# MongoDB 업데이트 함수
+def update_database(creature_data):
+    db.creatures.delete_many({})
+    db.creatures.insert_many(creature_data)
+    print("Database updated with the latest creature prices.")
+
+# 주기적으로 데이터 업데이트하는 작업
+def job():
+    creature_data = fetch_creature_prices()
+    update_database(creature_data)
+
+# 매일 오전 9시에 작업 수행
+schedule.every().day.at("09:00").do(job)
+
+# Discord 봇 설정
+intents = discord.Intents.default()
+intents.message_content = True
+bot = commands.Bot(command_prefix='!', intents=intents)
+
+@bot.event
+async def on_ready():
+    global inventory, prices
+    try:
+        inventory = load_inventory()
+        prices = load_prices()
+        print(f'Logged in as {bot.user.name} - Inventory and prices loaded.')
+        await bot.tree.sync()
+    except Exception as e:
+        print(f'Error in on_ready: {e}')
+
+@bot.command(name='price')
+async def fetch_price(ctx, *, creature_name: str):
+    creature = db.creatures.find_one({"name": creature_name.lower()})
+    if creature:
+        value = creature['value']
+        await ctx.send(f"{creature['name'].title()} - 중간값: {value}")
+    else:
+        await ctx.send(f"Creature {creature_name} not found.")
+
+# 환경 변수에서 토큰을 가져옵니다.
+TOKEN = os.getenv('DISCORD_BOT_TOKEN')
+if TOKEN is None:
+    raise ValueError("DISCORD_BOT_TOKEN 환경 변수가 설정되지 않았습니다.")
+
+# 스케줄러 실행
+def run_scheduler():
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+import threading
+scheduler_thread = threading.Thread(target=run_scheduler)
+scheduler_thread.start()
 
 # 환경 변수에서 MongoDB URI를 가져옵니다.
 MONGODB_URI = os.getenv('MONGODB_URI')
@@ -12,14 +100,6 @@ client = MongoClient(MONGODB_URI, tls=True, tlsAllowInvalidCertificates=True)
 db = client['discordbot']
 inventory_collection = db['inventory']
 prices_collection = db['prices']
-
-# 인텐트 설정
-intents = discord.Intents.default()
-intents.messages = True
-intents.message_content = True
-
-# 봇 객체 생성
-bot = commands.Bot(command_prefix='!', intents=intents)
 
 # 고정된 아이템 목록
 creatures = [
@@ -71,17 +151,6 @@ def save_prices(prices):
         print("Prices saved successfully")
     except Exception as e:
         print(f'Error saving prices: {e}')
-
-@bot.event
-async def on_ready():
-    global inventory, prices
-    try:
-        inventory = load_inventory()
-        prices = load_prices()
-        print(f'Logged in as {bot.user.name} - Inventory and prices loaded.')
-        await bot.tree.sync()
-    except Exception as e:
-        print(f'Error in on_ready: {e}')
 
 # 자동 완성 기능 구현
 async def autocomplete_items(interaction: discord.Interaction, current: str):
@@ -199,9 +268,5 @@ async def sell_message(interaction: discord.Interaction):
     
     await interaction.response.send_message(final_message)
 
-# 환경 변수에서 토큰을 가져옵니다.
-TOKEN = os.getenv('DISCORD_BOT_TOKEN')
-if TOKEN is None:
-    raise ValueError("DISCORD_BOT_TOKEN 환경 변수가 설정되지 않았습니다.")
 bot.run(TOKEN)
 
