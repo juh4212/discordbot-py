@@ -44,9 +44,10 @@ def load_inventory():
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM inventory")
         rows = cursor.fetchall()
-        if not rows:
-            print("No data found in the inventory table.")
         inventory = {row[0]: row[1] for row in rows}
+        for item in creatures + items:
+            if item not in inventory:
+                inventory[item] = "N/A"
         conn.close()
         return inventory
     except Exception as e:
@@ -67,9 +68,10 @@ def load_prices():
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM prices")
         rows = cursor.fetchall()
-        if not rows:
-            print("No data found in the prices table.")
         prices = {row[0]: {'슘 시세': row[1], '현금 시세': row[2]} for row in rows}
+        for item in creatures + items:
+            if item not in prices:
+                prices[item] = {'슘 시세': 'N/A', '현금 시세': 'N/A'}
         conn.close()
         return prices
     except Exception as e:
