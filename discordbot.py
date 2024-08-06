@@ -275,5 +275,3 @@ async def sell_message(interaction: discord.Interaction):
     await interaction.response.send_message(final_message)
 
 bot.run(TOKEN)
-
-
