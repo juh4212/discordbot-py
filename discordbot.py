@@ -29,24 +29,28 @@ def fetch_creature_prices():
 
     creature_data = []
 
+    # HTML 페이지에서 첫 번째 테이블 찾기
     table = soup.find('table')
     if not table:
         print("Table not found in the web page.")
         return creature_data
-    
+
+    # 테이블의 각 행 찾기 (첫 번째 행은 헤더이므로 제외)
     rows = table.find_all('tr')[1:]
 
     for row in rows:
         cols = row.find_all('td')
-        name = cols[0].text.strip().lower()
-        value = cols[1].text.strip().lower()
-        
-        if '~' in value:
-            range_values = re.findall(r'\d+', value)
-            median_value = (int(range_values[0]) + int(range_values[1])) / 2
-            value = f"{median_value}k"
-        
-        creature_data.append({"name": name, "value": value})
+        if len(cols) >= 2:
+            name = cols[0].text.strip().lower()
+            value = cols[1].text.strip().lower()
+            
+            if '~' in value:
+                range_values = re.findall(r'\d+', value)
+                if range_values:
+                    median_value = (int(range_values[0]) + int(range_values[1])) / 2
+                    value = f"{median_value}k"
+            
+            creature_data.append({"name": name, "value": value})
 
     return creature_data
 
@@ -236,7 +240,7 @@ async def load_list(interaction: discord.Interaction):
         update_database(creature_data)
         # prices 컬렉션을 갱신합니다.
         for creature in creature_data:
-            prices_collection.update_one({'item': creature['name']}, {'$set': {'shoom_price': creature['value']}}, upsert=True)
+            db.creatures.update_one({'name': creature['name']}, {'$set': {'shoom_price': creature['value']}}, upsert=True)
         await interaction.followup.send("Creature prices have been loaded and updated successfully.")
     else:
         await interaction.followup.send("Failed to load creature prices from the website.")
