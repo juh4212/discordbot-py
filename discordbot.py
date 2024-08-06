@@ -45,6 +45,9 @@ def load_inventory():
     cursor.execute("SELECT * FROM inventory")
     rows = cursor.fetchall()
     inventory = {row[0]: row[1] for row in rows}
+    for item in creatures + items:
+        if item not in inventory:
+            inventory[item] = 0
     conn.close()
     return inventory
 
@@ -62,6 +65,9 @@ def load_prices():
     cursor.execute("SELECT * FROM prices")
     rows = cursor.fetchall()
     prices = {row[0]: {'슘 시세': row[1], '현금 시세': row[2]} for row in rows}
+    for item in creatures + items:
+        if item not in prices:
+            prices[item] = {'슘 시세': 'N/A', '현금 시세': 'N/A'}
     conn.close()
     return prices
 
@@ -93,7 +99,7 @@ async def autocomplete_items(interaction: discord.Interaction, current: str):
 @discord.app_commands.autocomplete(item=autocomplete_items)
 async def add_item(interaction: discord.Interaction, item: str, quantity: int):
     if item in inventory:
-        inventory[item] = int(inventory[item]) + quantity if inventory[item] != "N/A" else quantity
+        inventory[item] = inventory.get(item, 0) + quantity
         save_inventory(inventory)
         await interaction.response.send_message(f'Item "{item}" added: {quantity} units.')
     else:
@@ -104,8 +110,8 @@ async def add_item(interaction: discord.Interaction, item: str, quantity: int):
 @discord.app_commands.describe(item='The item to remove', quantity='The quantity to remove')
 @discord.app_commands.autocomplete(item=autocomplete_items)
 async def remove_item(interaction: discord.Interaction, item: str, quantity: int):
-    if item in inventory and inventory[item] != "N/A" and int(inventory[item]) >= quantity:
-        inventory[item] = int(inventory[item]) - quantity
+    if item in inventory and inventory[item] >= quantity:
+        inventory[item] = inventory.get(item, 0) - quantity
         save_inventory(inventory)
         await interaction.response.send_message(f'Item "{item}" removed: {quantity} units.')
     else:
@@ -133,7 +139,7 @@ async def show_inventory(interaction: discord.Interaction):
 
     # Creatures 목록 추가 (첫 번째 임베드)
     for item in creatures[:len(creatures)//2]:
-        quantity = inventory.get(item, "N/A")
+        quantity = inventory.get(item, 0)
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
         shoom_price = prices_info["슘 시세"]
         cash_price = prices_info["현금 시세"]
@@ -141,7 +147,7 @@ async def show_inventory(interaction: discord.Interaction):
 
     # Creatures 목록 추가 (두 번째 임베드)
     for item in creatures[len(creatures)//2:]:
-        quantity = inventory.get(item, "N/A")
+        quantity = inventory.get(item, 0)
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
         shoom_price = prices_info["슘 시세"]
         cash_price = prices_info["현금 시세"]
@@ -149,7 +155,7 @@ async def show_inventory(interaction: discord.Interaction):
 
     # Items 목록 추가 (세 번째 임베드)
     for item in items:
-        quantity = inventory.get(item, "N/A")
+        quantity = inventory.get(item, 0)
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
         shoom_price = prices_info["슘 시세"]
         cash_price = prices_info["현금 시세"]
@@ -195,4 +201,5 @@ TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 if TOKEN is None:
     raise ValueError("DISCORD_BOT_TOKEN 환경 변수가 설정되지 않았습니다.")
 bot.run(TOKEN)
+
 
