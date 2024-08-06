@@ -12,3 +12,6 @@ python-dotenv==1.0.0
 discord.py
 mysql-connector-python
 pymongo[srv]==3.6
+discord.py
+pymongo
+python-dotenv
