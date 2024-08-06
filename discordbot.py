@@ -3,8 +3,6 @@ import requests
 from bs4 import BeautifulSoup
 from pymongo import MongoClient
 import re
-import schedule
-import time
 import discord
 from discord.ext import commands
 
@@ -48,15 +46,6 @@ def update_database(creature_data):
         db.creatures.update_one({'name': creature['name']}, {'$set': {'shoom_price': creature['value']}}, upsert=True)
     print("Database updated with the latest creature prices.")
 
-# 주기적으로 데이터 업데이트하는 작업
-def job():
-    creature_data = fetch_creature_prices()
-    if creature_data:
-        update_database(creature_data)
-
-# 5분마다 작업 수행
-schedule.every(5).minutes.do(job)
-
 # Discord 봇 설정
 intents = discord.Intents.default()
 intents.message_content = True
@@ -86,16 +75,6 @@ async def fetch_price(ctx, *, creature_name: str):
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 if TOKEN is None:
     raise ValueError("DISCORD_BOT_TOKEN 환경 변수가 설정되지 않았습니다.")
-
-# 스케줄러 실행
-def run_scheduler():
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
-
-import threading
-scheduler_thread = threading.Thread(target=run_scheduler)
-scheduler_thread.start()
 
 # 환경 변수에서 MongoDB URI를 가져옵니다.
 MONGODB_URI = os.getenv('MONGODB_URI')
@@ -273,5 +252,15 @@ async def sell_message(interaction: discord.Interaction):
     final_message = creatures_message + items_message + "\n• 문상 X  계좌 O\n• 구매를 원하시면 갠으로! \n• 재고는 갠디로 와서 물어봐주세요!"
     
     await interaction.response.send_message(final_message)
+
+# 슬래시 커맨드: 크리쳐 목록 불러오기
+@bot.tree.command(name='load_list', description='Load the creature prices from the website.')
+async def load_list(interaction: discord.Interaction):
+    creature_data = fetch_creature_prices()
+    if creature_data:
+        update_database(creature_data)
+        await interaction.response.send_message("Creature prices have been loaded and updated successfully.")
+    else:
+        await interaction.response.send_message("Failed to load creature prices from the website.")
 
 bot.run(TOKEN)
