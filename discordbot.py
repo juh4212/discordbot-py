@@ -246,6 +246,17 @@ async def setup_slash_commands():
     await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
     print(f'Slash commands synced for guild ID: {GUILD_ID}')
 
+@bot.event
+async def on_ready():
+    global inventory, prices
+    try:
+        inventory = load_inventory()
+        prices = load_prices()
+        print(f'Logged in as {bot.user.name} - Inventory and prices loaded.')
+        await setup_slash_commands()
+    except Exception as e:
+        print(f'Error in on_ready: {e}')
+
 # 모든 기능 실행
 if __name__ == '__main__':
     flask_thread = threading.Thread(target=lambda: app.run(debug=True, use_reloader=False))
