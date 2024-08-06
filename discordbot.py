@@ -1,72 +1,43 @@
 import discord
 from discord.ext import commands
-import mysql.connector
+from pymongo import MongoClient
 import os
 
-# MySQL 데이터베이스 설정
-db_config = {
-    'user': 'your_username',
-    'password': 'your_password',
-    'host': 'your_host',  # 로컬이면 'localhost', RDS이면 'your_rds_endpoint'
-    'database': 'your_database'
-}
+# MongoDB 설정
+mongo_uri = os.getenv('MONGO_URI')
+client = MongoClient(mongo_uri)
+db = client['discord_bot_db']  # 사용할 데이터베이스 이름
+inventory_collection = db['inventory']
+prices_collection = db['prices']
 
-def create_tables():
-    conn = mysql.connector.connect(**db_config)
-    cursor = conn.cursor()
-    cursor.execute('''CREATE TABLE IF NOT EXISTS inventory (
-                        item VARCHAR(255) PRIMARY KEY,
-                        quantity INTEGER)''')
-    cursor.execute('''CREATE TABLE IF NOT EXISTS prices (
-                        item VARCHAR(255) PRIMARY KEY,
-                        shoom_price INTEGER,
-                        cash_price FLOAT)''')
-    conn.commit()
-    cursor.close()
-    conn.close()
-
+# 인벤토리와 가격 데이터를 MongoDB에서 로드
 def load_inventory():
     inventory = {item: "N/A" for item in creatures + items}
-    conn = mysql.connector.connect(**db_config)
-    cursor = conn.cursor()
-    cursor.execute("SELECT item, quantity FROM inventory")
-    rows = cursor.fetchall()
-    for row in rows:
-        inventory[row[0]] = row[1]
-    cursor.close()
-    conn.close()
+    for doc in inventory_collection.find():
+        inventory[doc['item']] = doc['quantity']
     return inventory
 
 def save_inventory(inventory):
-    conn = mysql.connector.connect(**db_config)
-    cursor = conn.cursor()
     for item, quantity in inventory.items():
-        cursor.execute("REPLACE INTO inventory (item, quantity) VALUES (%s, %s)", (item, quantity))
-    conn.commit()
-    cursor.close()
-    conn.close()
+        inventory_collection.update_one(
+            {'item': item},
+            {'$set': {'item': item, 'quantity': quantity}},
+            upsert=True
+        )
 
 def load_prices():
     prices = {item: {'슘 시세': 'N/A', '현금 시세': 'N/A'} for item in creatures + items}
-    conn = mysql.connector.connect(**db_config)
-    cursor = conn.cursor()
-    cursor.execute("SELECT item, shoom_price, cash_price FROM prices")
-    rows = cursor.fetchall()
-    for row in rows:
-        prices[row[0]] = {'슘 시세': row[1], '현금 시세': row[2]}
-    cursor.close()
-    conn.close()
+    for doc in prices_collection.find():
+        prices[doc['item']] = {'슘 시세': doc['shoom_price'], '현금 시세': doc['cash_price']}
     return prices
 
 def save_prices(prices):
-    conn = mysql.connector.connect(**db_config)
-    cursor = conn.cursor()
     for item, price in prices.items():
-        cursor.execute("REPLACE INTO prices (item, shoom_price, cash_price) VALUES (%s, %s, %s)", 
-                       (item, price['슘 시세'], price['현금 시세']))
-    conn.commit()
-    cursor.close()
-    conn.close()
+        prices_collection.update_one(
+            {'item': item},
+            {'$set': {'item': item, 'shoom_price': price['슘 시세'], 'cash_price': price['현금 시세']}},
+            upsert=True
+        )
 
 # 인텐트 설정
 intents = discord.Intents.default()
@@ -76,6 +47,16 @@ intents.message_content = True
 # 봇 객체 생성
 bot = commands.Bot(command_prefix='!', intents=intents)
 
+# 고정된 아이템 목록
+creatures = [
+    "angelic warden", "aolenus", "ardor warden", "boreal warden", "caldonterrus", "corsarlett", 
+    "eigion warden", "ghartokus", "golgaroth", "hellion warden", "jhiggo jangl", "jotunhel", 
+    "luxces", "lus adarch", "magnacetus", "menace", "mijusuima", "nolumoth", "pacedegon", 
+    "parahexilian", "sang toare", "takamorath", "umbraxi", "urzuk", "verdent warden", 
+    "voletexius", "whispthera", "woodralone", "yohsog"
+]
+items = ["death gacha token", "revive token", "max growth token", "partial growth token", "strong glimmer token", "appearance change token"]
+
 # 전역 변수 초기화
 inventory = {}
 prices = {}
@@ -84,7 +65,6 @@ prices = {}
 async def on_ready():
     global inventory, prices
     try:
-        create_tables()
         inventory = load_inventory()
         prices = load_prices()
         print(f'Logged in as {bot.user.name} - Inventory and prices loaded.')
@@ -96,16 +76,6 @@ async def on_ready():
 async def autocomplete_items(interaction: discord.Interaction, current: str):
     all_items = creatures + items
     return [discord.app_commands.Choice(name=item, value=item) for item in all_items if current.lower() in item.lower()]
-
-# 고정된 아이템 목록
-creatures = [
-    "angelic warden", "aolenus", "ardor warden", "boreal warden", "caldonterrus", "corsarlett", 
-    "eigion warden", "ghartokus", "golgaroth", "hellion warden", "jhiggo jangl", "jotunhel", 
-    "luxces", "lus adarch", "magnacetus", "menace", "mijusuima", "nolumoth", "pacedegon", 
-    "parahexilian", "sang toare", "takamorath", "umbraxi", "urzuk", "verdent warden", 
-    "voletexius", "whispthera", "woodralone", "yohsog"
-]
-items = ["death gacha token", "revive token", "max growth token", "partial growth token", "strong glimmer token", "appearance change token"]
 
 # 슬래시 커맨드: 아이템 추가
 @bot.tree.command(name='add', description='Add items to the inventory.')
@@ -225,4 +195,5 @@ async def sell_message(interaction: discord.Interaction):
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 if TOKEN is None:
     raise ValueError("DISCORD_BOT_TOKEN 환경 변수가 설정되지 않았습니다.")
-bot.run(TOKEN)
+bot.run(TOKEN) 
+
