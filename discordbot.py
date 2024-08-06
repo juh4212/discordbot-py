@@ -55,12 +55,16 @@ def load_inventory():
         return {item: "N/A" for item in creatures + items}
 
 def save_inventory(inventory):
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    for item, quantity in inventory.items():
-        cursor.execute("REPLACE INTO inventory (item, quantity) VALUES (?, ?)", (item, quantity))
-    conn.commit()
-    conn.close()
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        for item, quantity in inventory.items():
+            cursor.execute("REPLACE INTO inventory (item, quantity) VALUES (?, ?)", (item, quantity))
+        conn.commit()
+        conn.close()
+        print("Inventory saved successfully")
+    except Exception as e:
+        print(f'Error saving inventory: {e}')
 
 def load_prices():
     try:
@@ -79,12 +83,16 @@ def load_prices():
         return {item: {'슘 시세': 'N/A', '현금 시세': 'N/A'} for item in creatures + items}
 
 def save_prices(prices):
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    for item, price in prices.items():
-        cursor.execute("REPLACE INTO prices (item, shoom_price, cash_price) VALUES (?, ?, ?)", (item, price['슘 시세'], price['현금 시세']))
-    conn.commit()
-    conn.close()
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        for item, price in prices.items():
+            cursor.execute("REPLACE INTO prices (item, shoom_price, cash_price) VALUES (?, ?, ?)", (item, price['슘 시세'], price['현금 시세']))
+        conn.commit()
+        conn.close()
+        print("Prices saved successfully")
+    except Exception as e:
+        print(f'Error saving prices: {e}')
 
 @bot.event
 async def on_ready():
@@ -205,8 +213,9 @@ async def sell_message(interaction: discord.Interaction):
         cash_price = prices_info["현금 시세"]
         if cash_price != "N/A":
             display_price = round(float(cash_price) * 0.0001, 2)
-        else:
+        else {
             display_price = "N/A"
+        }
         items_message += f"• {item.title()} {display_price}\n"
 
     # 필수 메시지 추가
@@ -219,5 +228,3 @@ TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 if TOKEN is None:
     raise ValueError("DISCORD_BOT_TOKEN 환경 변수가 설정되지 않았습니다.")
 bot.run(TOKEN)
-
-
