@@ -40,8 +40,8 @@ def fetch_creature_prices():
 
 # MongoDB 업데이트 함수
 def update_database(creature_data):
-    db.creatures.delete_many({})
-    db.creatures.insert_many(creature_data)
+    for creature in creature_data:
+        db.creatures.update_one({'name': creature['name']}, {'$set': {'shoom_price': creature['value']}}, upsert=True)
     print("Database updated with the latest creature prices.")
 
 # 주기적으로 데이터 업데이트하는 작업
@@ -72,7 +72,7 @@ async def on_ready():
 async def fetch_price(ctx, *, creature_name: str):
     creature = db.creatures.find_one({"name": creature_name.lower()})
     if creature:
-        value = creature['value']
+        value = creature['shoom_price']
         await ctx.send(f"{creature['name'].title()} - 중간값: {value}")
     else:
         await ctx.send(f"Creature {creature_name} not found.")
@@ -269,4 +269,5 @@ async def sell_message(interaction: discord.Interaction):
     await interaction.response.send_message(final_message)
 
 bot.run(TOKEN)
+
 
