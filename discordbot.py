@@ -5,6 +5,7 @@ from pymongo import MongoClient
 import re
 import discord
 from discord.ext import commands
+from discord import app_commands
 
 # MongoDB 연결 설정
 MONGODB_URI = os.getenv('MONGODB_URI')
@@ -58,6 +59,7 @@ async def on_ready():
         inventory = load_inventory()
         prices = load_prices()
         print(f'Logged in as {bot.user.name} - Inventory and prices loaded.')
+        await setup_slash_commands()
     except Exception as e:
         print(f'Error in on_ready: {e}')
 
@@ -144,12 +146,12 @@ def save_prices(prices):
 async def autocomplete_items(interaction: discord.Interaction, current: str):
     all_items = creatures + items
     # 최대 25개의 자동완성 옵션으로 제한
-    return [discord.app_commands.Choice(name=item, value=item) for item in all_items if current.lower() in item.lower()][:25]
+    return [app_commands.Choice(name=item, value=item) for item in all_items if current.lower() in item.lower()][:25]
 
 # 슬래시 커맨드: 아이템 추가
 @bot.tree.command(name='add', description='Add items to the inventory.')
-@discord.app_commands.describe(item='The item to add', quantity='The quantity to add')
-@discord.app_commands.autocomplete(item=autocomplete_items)
+@app_commands.describe(item='The item to add', quantity='The quantity to add')
+@app_commands.autocomplete(item=autocomplete_items)
 async def add_item(interaction: discord.Interaction, item: str, quantity: int):
     if item in creatures + items:
         current_quantity = inventory.get(item, "N/A")
@@ -164,8 +166,8 @@ async def add_item(interaction: discord.Interaction, item: str, quantity: int):
 
 # 슬래시 커맨드: 아이템 제거
 @bot.tree.command(name='remove', description='Remove items from the inventory.')
-@discord.app_commands.describe(item='The item to remove', quantity='The quantity to remove')
-@discord.app_commands.autocomplete(item=autocomplete_items)
+@app_commands.describe(item='The item to remove', quantity='The quantity to remove')
+@app_commands.autocomplete(item=autocomplete_items)
 async def remove_item(interaction: discord.Interaction, item: str, quantity: int):
     if item in creatures + items:
         current_quantity = inventory.get(item, "N/A")
@@ -180,8 +182,8 @@ async def remove_item(interaction: discord.Interaction, item: str, quantity: int
 
 # 슬래시 커맨드: 시세 업데이트
 @bot.tree.command(name='price', description='Update the price of an item.')
-@discord.app_commands.describe(item='The item to update the price for', shoom_price='The new shoom price of the item')
-@discord.app_commands.autocomplete(item=autocomplete_items)
+@app_commands.describe(item='The item to update the price for', shoom_price='The new shoom price of the item')
+@app_commands.autocomplete(item=autocomplete_items)
 async def update_price(interaction: discord.Interaction, item: str, shoom_price: int):
     if item in creatures + items:
         prices[item]["슘 시세"] = shoom_price
@@ -284,4 +286,3 @@ async def on_ready():
         print(f'Error in on_ready: {e}')
 
 bot.run(TOKEN)
-
