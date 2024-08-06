@@ -78,6 +78,11 @@ if TOKEN is None:
 # 환경 변수에서 MongoDB URI를 가져옵니다.
 MONGODB_URI = os.getenv('MONGODB_URI')
 
+# 환경 변수에서 GUILD ID를 가져옵니다.
+GUILD_ID = os.getenv('GUILD_ID')
+if GUILD_ID is None:
+    raise ValueError("GUILD_ID 환경 변수가 설정되지 않았습니다.")
+
 # MongoDB 클라이언트 설정
 client = MongoClient(MONGODB_URI, tls=True, tlsAllowInvalidCertificates=True)
 db = client['discordbot']
@@ -264,7 +269,7 @@ async def load_list(interaction: discord.Interaction):
 
 # 슬래시 명령어를 추가하기 위해 bot에 명령어를 등록
 async def setup_slash_commands():
-    bot.tree.copy_global_to(guild=discord.Object(id=GUILD_ID)) # GUILD_ID를 실제 사용중인 서버 ID로 바꿔야 합니다.
+    bot.tree.copy_global_to(guild=discord.Object(id=GUILD_ID))
     await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
 
 @bot.event
@@ -279,3 +284,4 @@ async def on_ready():
         print(f'Error in on_ready: {e}')
 
 bot.run(TOKEN)
+
