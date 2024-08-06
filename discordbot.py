@@ -98,7 +98,7 @@ async def autocomplete_items(interaction: discord.Interaction, current: str):
 @discord.app_commands.describe(item='The item to add', quantity='The quantity to add')
 @discord.app_commands.autocomplete(item=autocomplete_items)
 async def add_item(interaction: discord.Interaction, item: str, quantity: int):
-    if item in inventory:
+    if item in creatures + items:
         inventory[item] = inventory.get(item, 0) + quantity
         save_inventory(inventory)
         await interaction.response.send_message(f'Item "{item}" added: {quantity} units.')
@@ -110,19 +110,22 @@ async def add_item(interaction: discord.Interaction, item: str, quantity: int):
 @discord.app_commands.describe(item='The item to remove', quantity='The quantity to remove')
 @discord.app_commands.autocomplete(item=autocomplete_items)
 async def remove_item(interaction: discord.Interaction, item: str, quantity: int):
-    if item in inventory and inventory[item] >= quantity:
-        inventory[item] = inventory.get(item, 0) - quantity
-        save_inventory(inventory)
-        await interaction.response.send_message(f'Item "{item}" removed: {quantity} units.')
+    if item in creatures + items:
+        if inventory.get(item, 0) >= quantity:
+            inventory[item] = inventory.get(item, 0) - quantity
+            save_inventory(inventory)
+            await interaction.response.send_message(f'Item "{item}" removed: {quantity} units.')
+        else:
+            await interaction.response.send_message(f'Not enough "{item}" in inventory.')
     else:
-        await interaction.response.send_message(f'Not enough "{item}" in inventory or item not recognized.')
+        await interaction.response.send_message(f'Item "{item}" is not recognized.')
 
 # 슬래시 커맨드: 시세 업데이트
 @bot.tree.command(name='price', description='Update the price of an item.')
 @discord.app_commands.describe(item='The item to update the price for', shoom_price='The new shoom price of the item')
 @discord.app_commands.autocomplete(item=autocomplete_items)
 async def update_price(interaction: discord.Interaction, item: str, shoom_price: int):
-    if item in prices:
+    if item in creatures + items:
         prices[item]["슘 시세"] = shoom_price
         prices[item]["현금 시세"] = shoom_price * 0.7
         save_prices(prices)
