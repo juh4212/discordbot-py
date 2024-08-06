@@ -116,7 +116,11 @@ async def autocomplete_items(interaction: discord.Interaction, current: str):
 @discord.app_commands.autocomplete(item=autocomplete_items)
 async def add_item(interaction: discord.Interaction, item: str, quantity: int):
     if item in creatures + items:
-        inventory[item] = inventory.get(item, 0) + quantity
+        current_quantity = inventory.get(item, "N/A")
+        if current_quantity == "N/A":
+            inventory[item] = quantity
+        else:
+            inventory[item] = int(current_quantity) + quantity
         save_inventory(inventory)
         await interaction.response.send_message(f'Item "{item}" added: {quantity} units.')
     else:
@@ -128,12 +132,13 @@ async def add_item(interaction: discord.Interaction, item: str, quantity: int):
 @discord.app_commands.autocomplete(item=autocomplete_items)
 async def remove_item(interaction: discord.Interaction, item: str, quantity: int):
     if item in creatures + items:
-        if inventory.get(item, 0) >= quantity:
-            inventory[item] = inventory.get(item, 0) - quantity
+        current_quantity = inventory.get(item, "N/A")
+        if current_quantity == "N/A" or int(current_quantity) < quantity:
+            await interaction.response.send_message(f'Not enough "{item}" in inventory.')
+        else:
+            inventory[item] = int(current_quantity) - quantity
             save_inventory(inventory)
             await interaction.response.send_message(f'Item "{item}" removed: {quantity} units.')
-        else:
-            await interaction.response.send_message(f'Not enough "{item}" in inventory.')
     else:
         await interaction.response.send_message(f'Item "{item}" is not recognized.')
 
@@ -159,7 +164,7 @@ async def show_inventory(interaction: discord.Interaction):
 
     # Creatures 목록 추가 (첫 번째 임베드)
     for item in creatures[:len(creatures)//2]:
-        quantity = inventory.get(item, 0)
+        quantity = inventory.get(item, "N/A")
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
         shoom_price = prices_info["슘 시세"]
         cash_price = prices_info["현금 시세"]
@@ -167,7 +172,7 @@ async def show_inventory(interaction: discord.Interaction):
 
     # Creatures 목록 추가 (두 번째 임베드)
     for item in creatures[len(creatures)//2:]:
-        quantity = inventory.get(item, 0)
+        quantity = inventory.get(item, "N/A")
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
         shoom_price = prices_info["슘 시세"]
         cash_price = prices_info["현금 시세"]
@@ -175,7 +180,7 @@ async def show_inventory(interaction: discord.Interaction):
 
     # Items 목록 추가 (세 번째 임베드)
     for item in items:
-        quantity = inventory.get(item, 0)
+        quantity = inventory.get(item, "N/A")
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
         shoom_price = prices_info["슘 시세"]
         cash_price = prices_info["현금 시세"]
