@@ -49,8 +49,8 @@ def job():
     creature_data = fetch_creature_prices()
     update_database(creature_data)
 
-# 매일 오전 9시에 작업 수행
-schedule.every().day.at("22:45").do(job)
+# 5분마다 작업 수행
+schedule.every(5).minutes.do(job)
 
 # Discord 봇 설정
 intents = discord.Intents.default()
