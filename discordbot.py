@@ -56,16 +56,23 @@ def load_inventory():
         return {item: "N/A" for item in creatures + items}
 
 def save_inventory(inventory):
+    conn = None
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         for item, quantity in inventory.items():
             cursor.execute("REPLACE INTO inventory (item, quantity) VALUES (?, ?)", (item, quantity))
+            print(f"Item {item} with quantity {quantity} has been updated or added.")
         conn.commit()
-        conn.close()
-        print("Inventory saved successfully")
-    except Exception as e:
+        print("Inventory saved successfully.")
+    except sqlite3.Error as e:
+        if conn:
+            conn.rollback()
         print(f'Error saving inventory: {e}')
+    finally:
+        if conn:
+            conn.close()
+
 
 def load_prices():
     try:
@@ -84,17 +91,24 @@ def load_prices():
         return {item: {"슘 시세": "N/A", "현금 시세": "N/A"} for item in creatures + items}
 
 def save_prices(prices):
+    conn = None
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         for item, price in prices.items():
             cursor.execute("REPLACE INTO prices (item, shoom_price, cash_price) VALUES (?, ?, ?)",
                            (item, price["슘 시세"], price["현금 시세"]))
+            print(f"Prices for {item} updated to Shoom Price: {price['슘 시세']}, Cash Price: {price['현금 시세']}.")
         conn.commit()
-        conn.close()
-        print("Prices saved successfully")
-    except Exception as e:
+        print("Prices saved successfully.")
+    except sqlite3.Error as e:
+        if conn:
+            conn.rollback()
         print(f'Error saving prices: {e}')
+    finally:
+        if conn:
+            conn.close()
+
 
 @bot.event
 async def on_ready():
