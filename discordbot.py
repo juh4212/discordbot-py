@@ -6,6 +6,7 @@ import re
 import discord
 from discord.ext import commands
 from discord import app_commands
+import json
 
 # MongoDB 연결 설정
 MONGODB_URI = os.getenv('MONGODB_URI')
@@ -265,6 +266,9 @@ async def load_list(interaction: discord.Interaction):
     creature_data = fetch_creature_prices()
     if creature_data:
         update_database(creature_data)
+        # prices 컬렉션을 갱신합니다.
+        for creature in creature_data:
+            prices_collection.update_one({'item': creature['name']}, {'$set': {'shoom_price': creature['value']}}, upsert=True)
         await interaction.response.send_message("Creature prices have been loaded and updated successfully.")
     else:
         await interaction.response.send_message("Failed to load creature prices from the website.")
