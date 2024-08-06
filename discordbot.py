@@ -40,80 +40,86 @@ items = ["death gacha token", "revive token", "max growth token", "partial growt
 
 # 데이터 로드 함수
 def load_inventory():
-    try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM inventory")
-        rows = cursor.fetchall()
-        inventory = {row[0]: row[1] for row in rows}
-        for item in creatures + items:
-            if item not in inventory:
-                inventory[item] = "N/A"
-        conn.close()
-        return inventory
-    except Exception as e:
-        print(f'Error loading inventory: {e}')
-        return {item: "N/A" for item in creatures + items}
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM inventory")
+    rows = cursor.fetchall()
+    inventory = {row[0]: row[1] for row in rows}
+    for item in creatures + items:
+        if item not in inventory:
+            inventory[item] = "N/A"
+    conn.close()
+    return inventory
 
 def save_inventory(inventory):
-    try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        for item, quantity in inventory.items():
-            cursor.execute("REPLACE INTO inventory (item, quantity) VALUES (?, ?)", (item, quantity))
-        conn.commit()
-        conn.close()
-        print("Inventory saved successfully.")
-    except Exception as e:
-        print(f'Error saving inventory: {e}')
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    for item, quantity in inventory.items():
+        cursor.execute("REPLACE INTO inventory (item, quantity) VALUES (?, ?)", (item, quantity))
+    conn.commit()
+    conn.close()
 
 def load_prices():
-    try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM prices")
-        rows = cursor.fetchall()
-        prices = {row[0]: {"슘 시세": row[1], "현금 시세": row[2]} for row in rows}
-        for item in creatures + items:
-            if item not in prices:
-                prices[item] = {"슘 시세": "N/A", "현금 시세": "N/A"}
-        conn.close()
-        return prices
-    except Exception as e:
-        print(f'Error loading prices: {e}')
-        return {item: {"슘 시세": "N/A", "현금 시세": "N/A"} for item in creatures + items}
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM prices")
+    rows = cursor.fetchall()
+    prices = {row[0]: {'슘 시세': row[1], '현금 시세': row[2]} for row in rows}
+    for item in creatures + items:
+        if item not in prices:
+            prices[item] = {'슘 시세': 'N/A', '현금 시세': 'N/A'}
+    conn.close()
+    return prices
 
 def save_prices(prices):
-    try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        for item, price in prices.items():
-            cursor.execute("REPLACE INTO prices (item, shoom_price, cash_price) VALUES (?, ?, ?)", (item, price["슘 시세"], price["현금 시세"]))
-        conn.commit()
-        conn.close()
-        print("Prices saved successfully.")
-    except Exception as e:
-        print(f'Error saving prices: {e}')
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    for item, price in prices.items():
+        cursor.execute("REPLACE INTO prices (item, shoom_price, cash_price) VALUES (?, ?, ?)", (item, price['슘 시세'], price['현금 시세']))
+    conn.commit()
+    conn.close()
 
 @bot.event
 async def on_ready():
     global inventory, prices
-    try:
-        init_db()
-        inventory = load_inventory()
-        prices = load_prices()
-        print(f'Logged in as {bot.user.name} - Inventory and prices loaded.')
-        await bot.tree.sync()  # 슬래시 커맨드를 디스코드와 동기화합니다.
-    except Exception as e:
-        print(f'Error in on_ready: {e}')
+    init_db()
+    inventory = load_inventory()
+    prices = load_prices()
+    print(f'Logged in as {bot.user.name}')
+    await bot.tree.sync()  # 슬래시 커맨드를 디스코드와 동기화합니다.
 
-# 이하 슬래시 커맨드와 추가적인 기능들은 기존 코드와 동일하게 이어갑니다.
+@bot.tree.command(name='inventory', description='Show the current inventory with prices.')
+async def show_inventory(interaction: discord.Interaction):
+    embed = discord.Embed(title="Inventory Overview", color=discord.Color.blue())
+    for item, count in inventory.items():
+        price_info = prices.get(item, {'슘 시세': 'N/A', '현금 시세': 'N/A'})
+        embed.add_field(name=item, value=f"Count: {count}, Price: {price_info['슘 시세']}슘 / {price_info['현금 시세']}원", inline=False)
+    await interaction.response.send_message(embed=embed)
+
+# 슬래시 커맨드: 아이템 추가
+@bot.tree.command(name='add', description='Add items to the inventory.')
+@discord.app_commands.describe(item='The item to add', quantity='The quantity to add')
+async def add_item(interaction: discord.Interaction, item: str, quantity: int):
+    if item in inventory:
+        inventory[item] = int(inventory[item]) + quantity if inventory[item] != "N/A" else quantity
+        save_inventory(inventory)
+        await interaction.response.send_message(f'Item "{item}" added: {quantity} units.')
+    else:
+        await interaction.response.send_message(f'Item "{item}" is not recognized.')
+
+# 슬래시 커맨드: 아이템 제거
+@bot.tree.command(name='remove', description='Remove items from the inventory.')
+@discord.app_commands.describe(item='The item to remove', quantity='The quantity to remove')
+async def remove_item(interaction: discord.Interaction, item: str, quantity: int):
+    if item in inventory and inventory[item] != "N/A" and int(inventory[item]) >= quantity:
+        inventory[item] = int(inventory[item]) - quantity
+        save_inventory(inventory)
+        await interaction.response.send_message(f'Item "{item}" removed: {quantity} units.')
+    else:
+        await interaction.response.send_message(f'Not enough "{item}" in inventory or item not recognized.')
 
 # 환경 변수에서 토큰을 가져옵니다.
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 if TOKEN is None:
     raise ValueError("DISCORD_BOT_TOKEN 환경 변수가 설정되지 않았습니다.")
 bot.run(TOKEN)
-
-
-
