@@ -117,6 +117,19 @@ async def remove_item(interaction: discord.Interaction, item: str, quantity: int
     else:
         await interaction.response.send_message(f'Not enough "{item}" in inventory or item not recognized.')
 
+# 슬래시 커맨드: 시세 업데이트
+@bot.tree.command(name='price', description='Update the price of an item.')
+@discord.app_commands.describe(item='The item to update the price for', shoom_price='The new shoom price of the item')
+@discord.app_commands.autocomplete(item=autocomplete_items)
+async def update_price(interaction: discord.Interaction, item: str, shoom_price: int):
+    if item in prices:
+        prices[item]["슘 시세"] = shoom_price
+        prices[item]["현금 시세"] = shoom_price * 0.7
+        save_prices(prices)
+        await interaction.response.send_message(f'아이템 "{item}"의 시세가 슘 시세: {shoom_price}슘, 현금 시세: {shoom_price * 0.7}원으로 업데이트되었습니다.')
+    else:
+        await interaction.response.send_message(f'아이템 "{item}"은(는) 사용할 수 없는 아이템입니다.')
+
 # 슬래시 커맨드: 현재 재고 확인
 @bot.tree.command(name='inventory', description='Show the current inventory with prices.')
 async def show_inventory(interaction: discord.Interaction):
@@ -188,3 +201,4 @@ TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 if TOKEN is None:
     raise ValueError("DISCORD_BOT_TOKEN 환경 변수가 설정되지 않았습니다.")
 bot.run(TOKEN)
+
