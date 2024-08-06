@@ -220,3 +220,4 @@ if TOKEN is None:
     raise ValueError("DISCORD_BOT_TOKEN 환경 변수가 설정되지 않았습니다.")
 bot.run(TOKEN)
 
+
