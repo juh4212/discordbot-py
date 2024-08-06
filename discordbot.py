@@ -3,41 +3,16 @@ from discord.ext import commands
 from pymongo import MongoClient
 import os
 
-# MongoDB 설정
-mongo_uri = os.getenv('MONGO_URI')
-client = MongoClient(mongo_uri)
-db = client['discord_bot_db']  # 사용할 데이터베이스 이름
+# 환경 변수에서 MongoDB URI를 가져옵니다.
+MONGO_URI = os.getenv('MONGO_URI')
+if MONGO_URI is None:
+    raise ValueError("MONGO_URI 환경 변수가 설정되지 않았습니다.")
+
+# MongoDB 클라이언트 설정
+client = MongoClient(MONGO_URI)
+db = client['discordbot']  # 데이터베이스 선택
 inventory_collection = db['inventory']
 prices_collection = db['prices']
-
-# 인벤토리와 가격 데이터를 MongoDB에서 로드
-def load_inventory():
-    inventory = {item: "N/A" for item in creatures + items}
-    for doc in inventory_collection.find():
-        inventory[doc['item']] = doc['quantity']
-    return inventory
-
-def save_inventory(inventory):
-    for item, quantity in inventory.items():
-        inventory_collection.update_one(
-            {'item': item},
-            {'$set': {'item': item, 'quantity': quantity}},
-            upsert=True
-        )
-
-def load_prices():
-    prices = {item: {'슘 시세': 'N/A', '현금 시세': 'N/A'} for item in creatures + items}
-    for doc in prices_collection.find():
-        prices[doc['item']] = {'슘 시세': doc['shoom_price'], '현금 시세': doc['cash_price']}
-    return prices
-
-def save_prices(prices):
-    for item, price in prices.items():
-        prices_collection.update_one(
-            {'item': item},
-            {'$set': {'item': item, 'shoom_price': price['슘 시세'], 'cash_price': price['현금 시세']}},
-            upsert=True
-        )
 
 # 인텐트 설정
 intents = discord.Intents.default()
@@ -57,9 +32,43 @@ creatures = [
 ]
 items = ["death gacha token", "revive token", "max growth token", "partial growth token", "strong glimmer token", "appearance change token"]
 
-# 전역 변수 초기화
-inventory = {}
-prices = {}
+def load_inventory():
+    inventory = {}
+    for item in creatures + items:
+        data = inventory_collection.find_one({"item": item})
+        if data:
+            inventory[item] = data['quantity']
+        else:
+            inventory[item] = "N/A"
+            print(f"No inventory data for {item}. Defaulting to 'N/A'.")
+    return inventory
+
+def save_inventory(inventory):
+    for item, quantity in inventory.items():
+        inventory_collection.update_one(
+            {"item": item}, 
+            {"$set": {"quantity": quantity}}, 
+            upsert=True
+        )
+
+def load_prices():
+    prices = {}
+    for item in creatures + items:
+        data = prices_collection.find_one({"item": item})
+        if data:
+            prices[item] = {"슘 시세": data['shoom_price'], "현금 시세": data['cash_price']}
+        else:
+            prices[item] = {"슘 시세": "N/A", "현금 시세": "N/A"}
+            print(f"No pricing data for {item}. Defaulting to 'N/A'.")
+    return prices
+
+def save_prices(prices):
+    for item, price in prices.items():
+        prices_collection.update_one(
+            {"item": item}, 
+            {"$set": {"shoom_price": price['슘 시세'], "cash_price": price['현금 시세']}}, 
+            upsert=True
+        )
 
 @bot.event
 async def on_ready():
@@ -82,13 +91,12 @@ async def autocomplete_items(interaction: discord.Interaction, current: str):
 @discord.app_commands.describe(item='The item to add', quantity='The quantity to add')
 @discord.app_commands.autocomplete(item=autocomplete_items)
 async def add_item(interaction: discord.Interaction, item: str, quantity: int):
-    global inventory
     if item in creatures + items:
         current_quantity = inventory.get(item, "N/A")
         if current_quantity == "N/A":
             inventory[item] = quantity
         else:
-            inventory[item] = int(current_quantity) + quantity
+            inventory[item] += quantity
         save_inventory(inventory)
         await interaction.response.send_message(f'Item "{item}" added: {quantity} units.')
     else:
@@ -99,13 +107,14 @@ async def add_item(interaction: discord.Interaction, item: str, quantity: int):
 @discord.app_commands.describe(item='The item to remove', quantity='The quantity to remove')
 @discord.app_commands.autocomplete(item=autocomplete_items)
 async def remove_item(interaction: discord.Interaction, item: str, quantity: int):
-    global inventory
     if item in creatures + items:
         current_quantity = inventory.get(item, "N/A")
-        if current_quantity == "N/A" or int(current_quantity) < quantity:
+        if current_quantity == "N/A":
+            await interaction.response.send_message(f'No "{item}" in inventory.')
+        elif current_quantity < quantity:
             await interaction.response.send_message(f'Not enough "{item}" in inventory.')
         else:
-            inventory[item] = int(current_quantity) - quantity
+            inventory[item] -= quantity
             save_inventory(inventory)
             await interaction.response.send_message(f'Item "{item}" removed: {quantity} units.')
     else:
@@ -116,10 +125,8 @@ async def remove_item(interaction: discord.Interaction, item: str, quantity: int
 @discord.app_commands.describe(item='The item to update the price for', shoom_price='The new shoom price of the item')
 @discord.app_commands.autocomplete(item=autocomplete_items)
 async def update_price(interaction: discord.Interaction, item: str, shoom_price: int):
-    global prices
     if item in creatures + items:
-        prices[item]["슘 시세"] = shoom_price
-        prices[item]["현금 시세"] = shoom_price * 0.7
+        prices[item] = {"슘 시세": shoom_price, "현금 시세": shoom_price * 0.7}
         save_prices(prices)
         await interaction.response.send_message(f'아이템 "{item}"의 시세가 슘 시세: {shoom_price}슘, 현금 시세: {shoom_price * 0.7}원으로 업데이트되었습니다.')
     else:
@@ -195,5 +202,5 @@ async def sell_message(interaction: discord.Interaction):
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 if TOKEN is None:
     raise ValueError("DISCORD_BOT_TOKEN 환경 변수가 설정되지 않았습니다.")
-bot.run(TOKEN) 
+bot.run(TOKEN)
 
