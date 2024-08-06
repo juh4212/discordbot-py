@@ -1,0 +1,35 @@
+angelic warden:N/A
+aolenus:N/A
+ardor warden:N/A
+boreal warden:N/A
+caldonterrus:N/A
+corsarlett:N/A
+eigion warden:N/A
+ghartokus:N/A
+golgaroth:N/A
+hellion warden:N/A
+jhiggo jangl:N/A
+jotunhel:N/A
+luxces:N/A
+lus adarch:N/A
+magnacetus:N/A
+menace:N/A
+mijusuima:N/A
+nolumoth:N/A
+pacedegon:N/A
+parahexilian:N/A
+sang toare:N/A
+takamorath:N/A
+umbraxi:N/A
+urzuk:N/A
+verdent warden:N/A
+voletexius:N/A
+whispthera:N/A
+woodralone:N/A
+yohsog:N/A
+death gacha token:N/A
+revive token:N/A
+max growth token:N/A
+partial growth token:N/A
+strong glimmer token:N/A
+appearance change token:N/A
