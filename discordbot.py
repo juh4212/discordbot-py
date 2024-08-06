@@ -22,6 +22,10 @@ def fetch_creature_prices():
     creature_data = []
 
     table = soup.find('table')
+    if not table:
+        print("Table not found in the web page.")
+        return creature_data
+    
     rows = table.find_all('tr')[1:]
 
     for row in rows:
@@ -47,7 +51,8 @@ def update_database(creature_data):
 # 주기적으로 데이터 업데이트하는 작업
 def job():
     creature_data = fetch_creature_prices()
-    update_database(creature_data)
+    if creature_data:
+        update_database(creature_data)
 
 # 5분마다 작업 수행
 schedule.every(5).minutes.do(job)
@@ -155,7 +160,8 @@ def save_prices(prices):
 # 자동 완성 기능 구현
 async def autocomplete_items(interaction: discord.Interaction, current: str):
     all_items = creatures + items
-    return [discord.app_commands.Choice(name=item, value=item) for item in all_items if current.lower() in item.lower()]
+    # 최대 25개의 자동완성 옵션으로 제한
+    return [discord.app_commands.Choice(name=item, value=item) for item in all_items if current.lower() in item.lower()][:25]
 
 # 슬래시 커맨드: 아이템 추가
 @bot.tree.command(name='add', description='Add items to the inventory.')
