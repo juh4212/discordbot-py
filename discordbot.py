@@ -1,12 +1,20 @@
+# 크롤러 및 DB 업데이트
 import os
 import requests
 from bs4 import BeautifulSoup
 from pymongo import MongoClient
 import re
+import schedule
+import time
+from dotenv import load_dotenv
+import threading
+from flask import Flask, jsonify
 import discord
 from discord.ext import commands
 from discord import app_commands
-import json
+
+# 환경 변수 로드
+load_dotenv()
 
 # MongoDB 연결 설정
 MONGODB_URI = os.getenv('MONGODB_URI')
@@ -48,37 +56,65 @@ def update_database(creature_data):
         db.creatures.update_one({'name': creature['name']}, {'$set': {'shoom_price': creature['value']}}, upsert=True)
     print("Database updated with the latest creature prices.")
 
+# 주기적으로 크롤링 및 데이터베이스 업데이트
+def job():
+    print("Fetching creature prices...")
+    creature_data = fetch_creature_prices()
+    if creature_data:
+        update_database(creature_data)
+    else:
+        print("Failed to fetch creature prices.")
+
+schedule.every().day.at("09:00").do(job)
+
+# Flask API 서버 설정
+app = Flask(__name__)
+
+@app.route('/creature_prices', methods=['GET'])
+def get_creature_prices():
+    creatures = db.creatures.find({})
+    result = []
+    for creature in creatures:
+        result.append({
+            "name": creature['name'],
+            "shoom_price": creature['shoom_price']
+        })
+    return jsonify(result)
+
 # Discord 봇 설정
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
+FLASK_API_URL = 'http://localhost:5000/creature_prices'
+
+async def fetch_prices_from_api():
+    response = requests.get(FLASK_API_URL)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return []
+
 @bot.event
 async def on_ready():
-    global inventory, prices
-    try:
-        inventory = load_inventory()
-        prices = load_prices()
-        print(f'Logged in as {bot.user.name} - Inventory and prices loaded.')
-        await setup_slash_commands()
-    except Exception as e:
-        print(f'Error in on_ready: {e}')
+    print(f'Logged in as {bot.user.name}')
 
 @bot.command(name='price')
 async def fetch_price(ctx, *, creature_name: str):
-    creature = db.creatures.find_one({"name": creature_name.lower()})
-    if creature:
-        value = creature['shoom_price']
-        await ctx.send(f"{creature['name'].title()} - 중간값: {value}")
-    else:
-        await ctx.send(f"Creature {creature_name} not found.")
+    prices = await fetch_prices_from_api()
+    for creature in prices:
+        if creature['name'] == creature_name.lower():
+            value = creature['shoom_price']
+            await ctx.send(f"{creature['name'].title()} - 중간값: {value}")
+            return
+    await ctx.send(f"Creature {creature_name} not found.")
 
 # 환경 변수에서 토큰을 가져옵니다.
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 if TOKEN is None:
     raise ValueError("DISCORD_BOT_TOKEN 환경 변수가 설정되지 않았습니다.")
 
-# 환경 변수에서 MongoDB URI를 가져옵니다.
+# MongoDB 클라이언트 설정
 MONGODB_URI = os.getenv('MONGODB_URI')
 
 # 환경 변수에서 GUILD ID를 가져옵니다.
@@ -289,4 +325,14 @@ async def on_ready():
     except Exception as e:
         print(f'Error in on_ready: {e}')
 
-bot.run(TOKEN)
+# 모든 기능 실행
+if __name__ == '__main__':
+    flask_thread = threading.Thread(target=lambda: app.run(debug=True, use_reloader=False))
+    flask_thread.start()
+
+    bot_thread = threading.Thread(target=lambda: bot.run(TOKEN))
+    bot_thread.start()
+
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
