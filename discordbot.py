@@ -1,13 +1,10 @@
 import discord
 from discord.ext import commands
+import os
 
-# 인텐트 설정
-intents = discord.Intents.default()
-intents.messages = True
-intents.message_content = True
-
-# 봇 객체 생성
-bot = commands.Bot(command_prefix='!', intents=intents)
+# 데이터베이스 파일 경로 설정
+inventory_file_path = os.path.join(os.path.dirname(__file__), 'inventory.txt')
+prices_file_path = os.path.join(os.path.dirname(__file__), 'prices.txt')
 
 # 고정된 아이템 목록
 creatures = [
@@ -18,6 +15,42 @@ creatures = [
     "voletexius", "whispthera", "woodralone", "yohsog"
 ]
 items = ["death gacha token", "revive token", "max growth token", "partial growth token", "strong glimmer token", "appearance change token"]
+
+def load_inventory():
+    inventory = {item: "N/A" for item in creatures + items}
+    if os.path.exists(inventory_file_path):
+        with open(inventory_file_path, 'r') as file:
+            for line in file:
+                item, quantity = line.strip().split(':')
+                inventory[item] = quantity
+    return inventory
+
+def save_inventory(inventory):
+    with open(inventory_file_path, 'w') as file:
+        for item, quantity in inventory.items():
+            file.write(f"{item}:{quantity}\n")
+
+def load_prices():
+    prices = {item: {'슘 시세': 'N/A', '현금 시세': 'N/A'} for item in creatures + items}
+    if os.path.exists(prices_file_path):
+        with open(prices_file_path, 'r') as file:
+            for line in file:
+                item, shoom_price, cash_price = line.strip().split(':')
+                prices[item] = {'슘 시세': shoom_price, '현금 시세': cash_price}
+    return prices
+
+def save_prices(prices):
+    with open(prices_file_path, 'w') as file:
+        for item, price in prices.items():
+            file.write(f"{item}:{price['슘 시세']}:{price['현금 시세']}\n")
+
+# 인텐트 설정
+intents = discord.Intents.default()
+intents.messages = True
+intents.message_content = True
+
+# 봇 객체 생성
+bot = commands.Bot(command_prefix='!', intents=intents)
 
 @bot.event
 async def on_ready():
