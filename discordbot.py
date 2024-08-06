@@ -271,8 +271,8 @@ async def load_list(interaction: discord.Interaction):
 
 # 슬래시 명령어를 추가하기 위해 bot에 명령어를 등록
 async def setup_slash_commands():
-    bot.tree.copy_global_to(guild=discord.Object(id=GUILD_ID))
     await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
+    print(f'Slash commands synced for guild ID: {GUILD_ID}')
 
 @bot.event
 async def on_ready():
