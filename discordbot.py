@@ -1,10 +1,13 @@
 import discord
 from discord.ext import commands
-import shelve
-import os
 
-# 데이터베이스 파일 경로 설정
-db_path = os.path.join(os.path.dirname(__file__), 'bot_data.db')
+# 인텐트 설정
+intents = discord.Intents.default()
+intents.messages = True
+intents.message_content = True
+
+# 봇 객체 생성
+bot = commands.Bot(command_prefix='!', intents=intents)
 
 # 고정된 아이템 목록
 creatures = [
@@ -15,48 +18,6 @@ creatures = [
     "voletexius", "whispthera", "woodralone", "yohsog"
 ]
 items = ["death gacha token", "revive token", "max growth token", "partial growth token", "strong glimmer token", "appearance change token"]
-
-def load_inventory():
-    try:
-        with shelve.open(db_path) as db:
-            inventory = db.get('inventory', {item: "N/A" for item in creatures + items})
-        return inventory
-    except Exception as e:
-        print(f'Error loading inventory: {e}')
-        return {item: "N/A" for item in creatures + items}
-
-def save_inventory(inventory):
-    try:
-        with shelve.open(db_path) as db:
-            db['inventory'] = inventory
-        print("Inventory saved successfully")
-    except Exception as e:
-        print(f'Error saving inventory: {e}')
-
-def load_prices():
-    try:
-        with shelve.open(db_path) as db:
-            prices = db.get('prices', {item: {'슘 시세': 'N/A', '현금 시세': 'N/A'} for item in creatures + items})
-        return prices
-    except Exception as e:
-        print(f'Error loading prices: {e}')
-        return {item: {'슘 시세': 'N/A', '현금 시세': 'N/A'} for item in creatures + items}
-
-def save_prices(prices):
-    try:
-        with shelve.open(db_path) as db:
-            db['prices'] = prices
-        print("Prices saved successfully")
-    except Exception as e:
-        print(f'Error saving prices: {e}')
-
-# 인텐트 설정
-intents = discord.Intents.default()
-intents.messages = True
-intents.message_content = True
-
-# 봇 객체 생성
-bot = commands.Bot(command_prefix='!', intents=intents)
 
 @bot.event
 async def on_ready():
@@ -190,3 +151,4 @@ TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 if TOKEN is None:
     raise ValueError("DISCORD_BOT_TOKEN 환경 변수가 설정되지 않았습니다.")
 bot.run(TOKEN)
+
