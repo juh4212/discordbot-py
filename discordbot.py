@@ -6,7 +6,6 @@ import re
 import discord
 from discord.ext import commands
 from discord import app_commands
-import json
 import threading
 from flask import Flask, jsonify
 from dotenv import load_dotenv
@@ -29,13 +28,11 @@ def fetch_creature_prices():
 
     creature_data = []
 
-    # HTML 페이지에서 첫 번째 테이블 찾기
     table = soup.find('table')
     if not table:
         print("Table not found in the web page.")
         return creature_data
 
-    # 테이블의 각 행 찾기 (첫 번째 행은 헤더이므로 제외)
     rows = table.find_all('tr')[1:]
 
     for row in rows:
@@ -247,7 +244,9 @@ async def load_list(interaction: discord.Interaction):
 
 # 슬래시 명령어를 추가하기 위해 bot에 명령어를 등록
 async def setup_slash_commands():
-    await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
+    guild = discord.Object(id=GUILD_ID)
+    bot.tree.copy_global_to(guild=guild)
+    await bot.tree.sync(guild=guild)
     print(f'Slash commands synced for guild ID: {GUILD_ID}')
 
 @bot.event
