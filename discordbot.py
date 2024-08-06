@@ -1,17 +1,17 @@
-# 크롤러 및 DB 업데이트
 import os
 import requests
 from bs4 import BeautifulSoup
 from pymongo import MongoClient
 import re
-import schedule
-import time
-from dotenv import load_dotenv
-import threading
-from flask import Flask, jsonify
 import discord
 from discord.ext import commands
 from discord import app_commands
+import json
+import threading
+from flask import Flask, jsonify
+from dotenv import load_dotenv
+import schedule
+import time
 
 # 환경 변수 로드
 load_dotenv()
@@ -98,6 +98,7 @@ async def fetch_prices_from_api():
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user.name}')
+    await setup_slash_commands()
 
 @bot.command(name='price')
 async def fetch_price(ctx, *, creature_name: str):
@@ -108,76 +109,6 @@ async def fetch_price(ctx, *, creature_name: str):
             await ctx.send(f"{creature['name'].title()} - 중간값: {value}")
             return
     await ctx.send(f"Creature {creature_name} not found.")
-
-# 환경 변수에서 토큰을 가져옵니다.
-TOKEN = os.getenv('DISCORD_BOT_TOKEN')
-if TOKEN is None:
-    raise ValueError("DISCORD_BOT_TOKEN 환경 변수가 설정되지 않았습니다.")
-
-# MongoDB 클라이언트 설정
-MONGODB_URI = os.getenv('MONGODB_URI')
-
-# 환경 변수에서 GUILD ID를 가져옵니다.
-GUILD_ID = os.getenv('GUILD_ID')
-if GUILD_ID is None:
-    raise ValueError("GUILD_ID 환경 변수가 설정되지 않았습니다.")
-
-# MongoDB 클라이언트 설정
-client = MongoClient(MONGODB_URI, tls=True, tlsAllowInvalidCertificates=True)
-db = client['discordbot']
-inventory_collection = db['inventory']
-prices_collection = db['prices']
-
-# 고정된 아이템 목록
-creatures = [
-    "angelic warden", "aolenus", "ardor warden", "boreal warden", "caldonterrus", "corsarlett", 
-    "eigion warden", "ghartokus", "golgaroth", "hellion warden", "jhiggo jangl", "jotunhel", 
-    "luxces", "lus adarch", "magnacetus", "menace", "mijusuima", "nolumoth", "pacedegon", 
-    "parahexilian", "sang toare", "takamorath", "umbraxi", "urzuk", "verdent warden", 
-    "voletexius", "whispthera", "woodralone", "yohsog"
-]
-items = ["death gacha token", "revive token", "max growth token", "partial growth token", "strong glimmer token", "appearance change token"]
-
-# 데이터 로드 함수
-def load_inventory():
-    try:
-        inventory_data = inventory_collection.find({})
-        inventory = {item['item']: item['quantity'] for item in inventory_data}
-        for item in creatures + items:
-            if item not in inventory:
-                inventory[item] = "N/A"
-        return inventory
-    except Exception as e:
-        print(f'Error loading inventory: {e}')
-        return {item: "N/A" for item in creatures + items}
-
-def save_inventory(inventory):
-    try:
-        for item, quantity in inventory.items():
-            inventory_collection.update_one({'item': item}, {'$set': {'quantity': quantity}}, upsert=True)
-        print("Inventory saved successfully")
-    except Exception as e:
-        print(f'Error saving inventory: {e}')
-
-def load_prices():
-    try:
-        prices_data = prices_collection.find({})
-        prices = {item['item']: {'슘 시세': item['shoom_price'], '현금 시세': item['cash_price']} for item in prices_data}
-        for item in creatures + items:
-            if item not in prices:
-                prices[item] = {'슘 시세': "N/A", '현금 시세': "N/A"}
-        return prices
-    except Exception as e:
-        print(f'Error loading prices: {e}')
-        return {item: {'슘 시세': "N/A", '현금 시세': "N/A"} for item in creatures + items}
-
-def save_prices(prices):
-    try:
-        for item, price in prices.items():
-            prices_collection.update_one({'item': item}, {'$set': {'shoom_price': price['슘 시세'], 'cash_price': price['현금 시세']}}, upsert=True)
-        print("Prices saved successfully")
-    except Exception as e:
-        print(f'Error saving prices: {e}')
 
 # 자동 완성 기능 구현
 async def autocomplete_items(interaction: discord.Interaction, current: str):
