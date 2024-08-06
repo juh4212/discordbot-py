@@ -93,6 +93,16 @@ async def autocomplete_items(interaction: discord.Interaction, current: str):
     all_items = creatures + items
     return [discord.app_commands.Choice(name=item, value=item) for item in all_items if current.lower() in item.lower()]
 
+# 고정된 아이템 목록
+creatures = [
+    "angelic warden", "aolenus", "ardor warden", "boreal warden", "caldonterrus", "corsarlett", 
+    "eigion warden", "ghartokus", "golgaroth", "hellion warden", "jhiggo jangl", "jotunhel", 
+    "luxces", "lus adarch", "magnacetus", "menace", "mijusuima", "nolumoth", "pacedegon", 
+    "parahexilian", "sang toare", "takamorath", "umbraxi", "urzuk", "verdent warden", 
+    "voletexius", "whispthera", "woodralone", "yohsog"
+]
+items = ["death gacha token", "revive token", "max growth token", "partial growth token", "strong glimmer token", "appearance change token"]
+
 # 슬래시 커맨드: 아이템 추가
 @bot.tree.command(name='add', description='Add items to the inventory.')
 @discord.app_commands.describe(item='The item to add', quantity='The quantity to add')
