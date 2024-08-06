@@ -7,7 +7,7 @@ import os
 db_config = {
     'user': 'your_username',
     'password': 'your_password',
-    'host': 'your_host',
+    'host': 'your_host',  # 로컬이면 'localhost', RDS이면 'your_rds_endpoint'
     'database': 'your_database'
 }
 
@@ -76,6 +76,10 @@ intents.message_content = True
 # 봇 객체 생성
 bot = commands.Bot(command_prefix='!', intents=intents)
 
+# 전역 변수 초기화
+inventory = {}
+prices = {}
+
 @bot.event
 async def on_ready():
     global inventory, prices
@@ -108,6 +112,7 @@ items = ["death gacha token", "revive token", "max growth token", "partial growt
 @discord.app_commands.describe(item='The item to add', quantity='The quantity to add')
 @discord.app_commands.autocomplete(item=autocomplete_items)
 async def add_item(interaction: discord.Interaction, item: str, quantity: int):
+    global inventory
     if item in creatures + items:
         current_quantity = inventory.get(item, "N/A")
         if current_quantity == "N/A":
@@ -124,6 +129,7 @@ async def add_item(interaction: discord.Interaction, item: str, quantity: int):
 @discord.app_commands.describe(item='The item to remove', quantity='The quantity to remove')
 @discord.app_commands.autocomplete(item=autocomplete_items)
 async def remove_item(interaction: discord.Interaction, item: str, quantity: int):
+    global inventory
     if item in creatures + items:
         current_quantity = inventory.get(item, "N/A")
         if current_quantity == "N/A" or int(current_quantity) < quantity:
@@ -140,6 +146,7 @@ async def remove_item(interaction: discord.Interaction, item: str, quantity: int
 @discord.app_commands.describe(item='The item to update the price for', shoom_price='The new shoom price of the item')
 @discord.app_commands.autocomplete(item=autocomplete_items)
 async def update_price(interaction: discord.Interaction, item: str, shoom_price: int):
+    global prices
     if item in creatures + items:
         prices[item]["슘 시세"] = shoom_price
         prices[item]["현금 시세"] = shoom_price * 0.7
@@ -177,7 +184,7 @@ async def show_inventory(interaction: discord.Interaction):
         prices_info = prices.get(item, {"슘 시세": "N/A", "현금 시세": "N/A"})
         shoom_price = prices_info["슘 시세"]
         cash_price = prices_info["현금 시세"]
-        embed3.add_field(name=item, value=f"재고: {quantity}\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
+        embed3.add_field(name=item, value=f"재고: {quantity}\n슘 시세: {shoom_price}\n현금 시세: {cash_price}원", inline=True)
 
     # 임베드 메시지를 디스코드에 전송
     await interaction.response.send_message(embeds=[embed1, embed2, embed3])
@@ -219,4 +226,5 @@ TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 if TOKEN is None:
     raise ValueError("DISCORD_BOT_TOKEN 환경 변수가 설정되지 않았습니다.")
 bot.run(TOKEN)
+
 
