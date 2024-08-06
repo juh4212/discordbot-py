@@ -15,3 +15,4 @@ pymongo[srv]==3.6
 discord.py
 pymongo
 python-dotenv
+pymongo>=3.11
