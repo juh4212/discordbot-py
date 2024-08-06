@@ -58,7 +58,6 @@ async def on_ready():
         inventory = load_inventory()
         prices = load_prices()
         print(f'Logged in as {bot.user.name} - Inventory and prices loaded.')
-        await bot.tree.sync()
     except Exception as e:
         print(f'Error in on_ready: {e}')
 
@@ -262,5 +261,21 @@ async def load_list(interaction: discord.Interaction):
         await interaction.response.send_message("Creature prices have been loaded and updated successfully.")
     else:
         await interaction.response.send_message("Failed to load creature prices from the website.")
+
+# 슬래시 명령어를 추가하기 위해 bot에 명령어를 등록
+async def setup_slash_commands():
+    bot.tree.copy_global_to(guild=discord.Object(id=GUILD_ID)) # GUILD_ID를 실제 사용중인 서버 ID로 바꿔야 합니다.
+    await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
+
+@bot.event
+async def on_ready():
+    global inventory, prices
+    try:
+        inventory = load_inventory()
+        prices = load_prices()
+        print(f'Logged in as {bot.user.name} - Inventory and prices loaded.')
+        await setup_slash_commands()
+    except Exception as e:
+        print(f'Error in on_ready: {e}')
 
 bot.run(TOKEN)
