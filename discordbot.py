@@ -241,10 +241,10 @@ async def load_list(interaction: discord.Interaction):
 
 # 슬래시 명령어를 추가하기 위해 bot에 명령어를 등록
 async def setup_slash_commands():
-    guild = discord.Object(id=GUILD_ID)
+    guild = discord.Object(id=os.getenv('GUILD_ID'))
     bot.tree.copy_global_to(guild=guild)
     await bot.tree.sync(guild=guild)
-    print(f'Slash commands synced for guild ID: {GUILD_ID}')
+    print(f'Slash commands synced for guild ID: {guild.id}')
 
 @bot.event
 async def on_ready():
@@ -257,12 +257,53 @@ async def on_ready():
     except Exception as e:
         print(f'Error in on_ready: {e}')
 
+# 데이터 로드 함수
+def load_inventory():
+    try:
+        inventory_data = inventory_collection.find({})
+        inventory = {item['item']: item['quantity'] for item in inventory_data}
+        for item in creatures + items:
+            if item not in inventory:
+                inventory[item] = "N/A"
+        return inventory
+    except Exception as e:
+        print(f'Error loading inventory: {e}')
+        return {item: "N/A" for item in creatures + items}
+
+def save_inventory(inventory):
+    try:
+        for item, quantity in inventory.items():
+            inventory_collection.update_one({'item': item}, {'$set': {'quantity': quantity}}, upsert=True)
+        print("Inventory saved successfully")
+    except Exception as e:
+        print(f'Error saving inventory: {e}')
+
+def load_prices():
+    try:
+        prices_data = prices_collection.find({})
+        prices = {item['item']: {'슘 시세': item['shoom_price'], '현금 시세': item['cash_price']} for item in prices_data}
+        for item in creatures + items:
+            if item not in prices:
+                prices[item] = {'슘 시세': "N/A", '현금 시세': "N/A"}
+        return prices
+    except Exception as e:
+        print(f'Error loading prices: {e}')
+        return {item: {'슘 시세': "N/A", '현금 시세': "N/A"} for item in creatures + items}
+
+def save_prices(prices):
+    try:
+        for item, price in prices.items():
+            prices_collection.update_one({'item': item}, {'$set': {'shoom_price': price['슘 시세'], 'cash_price': price['현금 시세']}}, upsert=True)
+        print("Prices saved successfully")
+    except Exception as e:
+        print(f'Error saving prices: {e}')
+
 # 모든 기능 실행
 if __name__ == '__main__':
     flask_thread = threading.Thread(target=lambda: app.run(debug=True, use_reloader=False))
     flask_thread.start()
 
-    bot_thread = threading.Thread(target=lambda: bot.run(TOKEN))
+    bot_thread = threading.Thread(target=lambda: bot.run(os.getenv('DISCORD_BOT_TOKEN')))
     bot_thread.start()
 
     while True:
