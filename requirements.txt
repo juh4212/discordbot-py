@@ -1,6 +1,6 @@
 beautifulsoup4==4.12.2
 discord.py==2.1.1
-pymongo==4.2.0
+pymongo[srv]==4.2.0
 requests==2.31.0
 flask==2.3.3
 python-dotenv==1.0.0
