@@ -1,8 +1,8 @@
-discord.py
-flask
-beautifulsoup4
-requests
-pymongo==3.12.0
-dnspython==2.1.0
-python-dotenv
-schedule
+beautifulsoup4==4.12.2
+discord.py==2.1.1
+pymongo==4.2.0
+requests==2.31.0
+flask==2.3.3
+python-dotenv==1.0.0
+schedule==1.2.0
+gunicorn==20.1.0
