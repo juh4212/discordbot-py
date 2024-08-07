@@ -7,7 +7,6 @@ import re
 import discord
 from discord.ext import commands
 from discord import app_commands
-from flask import Flask, jsonify
 from dotenv import load_dotenv
 import threading
 import time
@@ -80,33 +79,14 @@ def update_database(creature_data):
         db.creatures.update_one({'name': creature['name']}, {'$set': {'shoom_price': creature['value']}}, upsert=True)
     print("Database updated with the latest creature prices.")
 
-# Flask API 서버 설정
-app = Flask(__name__)
-
-@app.route('/creature_prices', methods=['GET'])
-def get_creature_prices():
-    creatures = db.creatures.find({})
-    result = []
-    for creature in creatures:
-        result.append({
-            "name": creature['name'],
-            "shoom_price": creature['shoom_price']
-        })
-    return jsonify(result)
-
-# Flask 서버 스레드 시작
-def run_flask():
-    app.run(debug=True, use_reloader=False)
-
 # Discord 봇 설정
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-FLASK_API_URL = 'http://localhost:5000/creature_prices'
-
 async def fetch_prices_from_api():
-    response = requests.get(FLASK_API_URL)
+    url = 'http://localhost:5000/creature_prices'
+    response = requests.get(url)
     if response.status_code == 200:
         return response.json()
     else:
@@ -302,11 +282,4 @@ def save_prices(prices):
 
 # 모든 기능 실행
 if __name__ == '__main__':
-    flask_thread = threading.Thread(target=run_flask)
-    flask_thread.start()
-
-    bot_thread = threading.Thread(target=lambda: bot.run(os.getenv('DISCORD_BOT_TOKEN')))
-    bot_thread.start()
-
-    while True:
-        time.sleep(1)
+    bot.run(os.getenv('DISCORD_BOT_TOKEN'))
