@@ -10,6 +10,7 @@ from discord import app_commands
 from dotenv import load_dotenv
 import threading
 import time
+from decimal import Decimal, ROUND_HALF_UP
 
 # 환경 변수 로드
 load_dotenv()
@@ -40,6 +41,10 @@ headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
     'Accept-Language': 'en-US,en;q=0.9'
 }
+
+# 소수점 둘째 자리를 0 또는 5로 반올림하는 함수
+def round_to_nearest_0_or_5(value):
+    return float((Decimal(value) * 10).quantize(Decimal('1'), rounding=ROUND_HALF_UP) / 10)
 
 # 크리쳐 가격 정보를 웹 스크래핑하는 함수
 def fetch_creature_prices():
@@ -211,7 +216,7 @@ async def sell_message(interaction: discord.Interaction):
         prices_info = prices.get(item, {"현금 시세": "N/A"})
         cash_price = prices_info["현금 시세"]
         if cash_price != "N/A":
-            display_price = round(float(cash_price) * 0.0001, 2)
+            display_price = round_to_nearest_0_or_5(float(cash_price) * 0.0001)
         else:
             display_price = "N/A"
         creatures_message += f"• {item.title()} {display_price} (재고 {quantity})\n"
@@ -222,7 +227,7 @@ async def sell_message(interaction: discord.Interaction):
         prices_info = prices.get(item, {"현금 시세": "N/A"})
         cash_price = prices_info["현금 시세"]
         if cash_price != "N/A":
-            display_price = round(float(cash_price) * 0.0001, 2)
+            display_price = round_to_nearest_0_or_5(float(cash_price) * 0.0001)
         else:
             display_price = "N/A"
         items_message += f"• {item.title()} {display_price} (재고 {quantity})\n"
