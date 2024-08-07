@@ -40,28 +40,26 @@ def fetch_creature_prices():
 
     creature_data = []
 
-    # 테이블을 찾는 로직을 업데이트
-    tables = soup.find_all('table')
-    if not tables:
+    table = soup.find('table')
+    if not table:
         print("Table not found in the web page.")
         return creature_data
 
-    for table in tables:
-        rows = table.find_all('tr')[1:]
+    rows = table.find_all('tr')[1:]
 
-        for row in rows:
-            cols = row.find_all('td')
-            if len(cols) >= 2:
-                name = cols[0].text.strip().lower()
-                value = cols[1].text.strip().lower()
-                
-                if '~' in value:
-                    range_values = re.findall(r'\d+', value)
-                    if range_values:
-                        median_value = (int(range_values[0]) + int(range_values[1])) / 2
-                        value = f"{median_value}k"
-                
-                creature_data.append({"name": name, "value": value})
+    for row in rows:
+        cols = row.find_all('td')
+        if len(cols) >= 2:
+            name = cols[0].text.strip().lower()
+            value = cols[1].text.strip().lower()
+            
+            if '~' in value:
+                range_values = re.findall(r'\d+', value)
+                if range_values:
+                    median_value = (int(range_values[0]) + int(range_values[1])) / 2
+                    value = f"{median_value}k"
+            
+            creature_data.append({"name": name, "value": value})
 
     return creature_data
 
@@ -95,10 +93,6 @@ def get_creature_prices():
             "shoom_price": creature['shoom_price']
         })
     return jsonify(result)
-
-# Flask 서버 스레드 시작
-def run_flask():
-    app.run(debug=True, use_reloader=False)
 
 # Discord 봇 설정
 intents = discord.Intents.default()
