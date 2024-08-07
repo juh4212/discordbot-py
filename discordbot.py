@@ -1,4 +1,5 @@
 import os
+import random
 import requests
 from bs4 import BeautifulSoup
 from pymongo import MongoClient
@@ -8,7 +9,6 @@ from discord.ext import commands
 from discord import app_commands
 from flask import Flask, jsonify
 from dotenv import load_dotenv
-import schedule
 import threading
 import time
 
@@ -32,10 +32,20 @@ creatures = [
 ]
 items = ["death gacha token", "revive token", "max growth token", "partial growth token", "strong glimmer token", "appearance change token"]
 
+# 타임 슬립과 랜덤 유니폼 적용
+def random_sleep(min_sleep=3, max_sleep=5):
+    time.sleep(random.uniform(min_sleep, max_sleep))
+
+# 유저 에이전트와 추가 헤더 설정
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    'Accept-Language': 'en-US,en;q=0.9'
+}
+
 # 크리쳐 가격 정보를 웹 스크래핑하는 함수
 def fetch_creature_prices():
     url = 'https://www.game.guide/creatures-of-sonaria-value-list'
-    response = requests.get(url)
+    response = requests.get(url, headers=headers)
     soup = BeautifulSoup(response.text, 'html.parser')
 
     creature_data = []
@@ -48,6 +58,7 @@ def fetch_creature_prices():
     rows = table.find_all('tr')[1:]
 
     for row in rows:
+        random_sleep()  # 각 요청 사이에 랜덤한 대기 시간 추가
         cols = row.find_all('td')
         if len(cols) >= 2:
             name = cols[0].text.strip().lower()
@@ -68,17 +79,6 @@ def update_database(creature_data):
     for creature in creature_data:
         db.creatures.update_one({'name': creature['name']}, {'$set': {'shoom_price': creature['value']}}, upsert=True)
     print("Database updated with the latest creature prices.")
-
-# 주기적으로 크롤링 및 데이터베이스 업데이트
-def job():
-    print("Fetching creature prices...")
-    creature_data = fetch_creature_prices()
-    if creature_data:
-        update_database(creature_data)
-    else:
-        print("Failed to fetch creature prices.")
-
-schedule.every().day.at("09:00").do(job)
 
 # Flask API 서버 설정
 app = Flask(__name__)
@@ -320,6 +320,4 @@ if __name__ == '__main__':
     bot_thread.start()
 
     while True:
-        schedule.run_pending()
-        time.sleep(3)
-
+        time.sleep(1)
