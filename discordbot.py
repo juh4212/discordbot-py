@@ -114,8 +114,14 @@ async def fetch_prices_from_api():
 
 @bot.event
 async def on_ready():
-    print(f'Logged in as {bot.user.name}')
-    await setup_slash_commands()
+    global inventory, prices
+    try:
+        inventory = load_inventory()
+        prices = load_prices()
+        print(f'Logged in as {bot.user.name} - Inventory and prices loaded.')
+        await setup_slash_commands()
+    except Exception as e:
+        print(f'Error in on_ready: {e}')
 
 @bot.command(name='price')
 async def fetch_price(ctx, *, creature_name: str):
@@ -264,17 +270,6 @@ async def setup_slash_commands():
     await bot.tree.sync(guild=guild)
     print(f'Slash commands synced for guild ID: {guild.id}')
 
-@bot.event
-async def on_ready():
-    global inventory, prices
-    try:
-        inventory = load_inventory()
-        prices = load_prices()
-        print(f'Logged in as {bot.user.name} - Inventory and prices loaded.')
-        await setup_slash_commands()
-    except Exception as e:
-        print(f'Error in on_ready: {e}')
-
 # 데이터 로드 함수
 def load_inventory():
     try:
@@ -326,4 +321,5 @@ if __name__ == '__main__':
 
     while True:
         schedule.run_pending()
-        time.sleep(1)
+        time.sleep(3)
+
