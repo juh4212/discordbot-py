@@ -82,6 +82,10 @@ def get_creature_prices():
         })
     return jsonify(result)
 
+# Flask 서버 스레드 시작
+def run_flask():
+    app.run(debug=True, use_reloader=False)
+
 # Discord 봇 설정
 intents = discord.Intents.default()
 intents.message_content = True
@@ -205,23 +209,25 @@ async def sell_message(interaction: discord.Interaction):
 
     # Creatures 목록 추가
     for item in creatures:
+        quantity = inventory.get(item, "N/A")
         prices_info = prices.get(item, {"현금 시세": "N/A"})
         cash_price = prices_info["현금 시세"]
         if cash_price != "N/A":
             display_price = round(float(cash_price) * 0.0001, 2)
         else:
             display_price = "N/A"
-        creatures_message += f"• {item.title()} {display_price}\n"
+        creatures_message += f"• {item.title()} {display_price} (재고 {quantity})\n"
 
     # Items 목록 추가
     for item in items:
+        quantity = inventory.get(item, "N/A")
         prices_info = prices.get(item, {"현금 시세": "N/A"})
         cash_price = prices_info["현금 시세"]
         if cash_price != "N/A":
             display_price = round(float(cash_price) * 0.0001, 2)
         else:
             display_price = "N/A"
-        items_message += f"• {item.title()} {display_price}\n"
+        items_message += f"• {item.title()} {display_price} (재고 {quantity})\n"
 
     # 필수 메시지 추가
     final_message = creatures_message + items_message + "\n• 문상 X  계좌 O\n• 구매를 원하시면 갠으로! \n• 재고는 갠디로 와서 물어봐주세요!"
@@ -300,7 +306,7 @@ def save_prices(prices):
 
 # 모든 기능 실행
 if __name__ == '__main__':
-    flask_thread = threading.Thread(target=lambda: app.run(debug=True, use_reloader=False))
+    flask_thread = threading.Thread(target=run_flask)
     flask_thread.start()
 
     bot_thread = threading.Thread(target=lambda: bot.run(os.getenv('DISCORD_BOT_TOKEN')))
@@ -309,3 +315,4 @@ if __name__ == '__main__':
     while True:
         schedule.run_pending()
         time.sleep(1)
+
