@@ -252,17 +252,6 @@ async def sell_message(interaction: discord.Interaction):
     
     await interaction.response.send_message(final_message)
 
-# 슬래시 커맨드: 크리쳐 목록 불러오기
-@bot.tree.command(name='load_list', description='Load the creature prices from the website.')
-async def load_list(interaction: discord.Interaction):
-    await interaction.response.defer()  # Interaction이 시작되었음을 Discord에 알림
-    creature_data = fetch_creature_prices()
-    if creature_data:
-        update_database(creature_data)
-        await interaction.followup.send("Creature prices have been loaded and updated successfully.")
-    else:
-        await interaction.followup.send("Failed to load creature prices from the website.")
-
 # 슬래시 명령어를 추가하기 위해 bot에 명령어를 등록
 async def setup_slash_commands():
     guild = discord.Object(id=os.getenv('GUILD_ID'))
