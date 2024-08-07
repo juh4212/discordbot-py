@@ -94,6 +94,10 @@ def get_creature_prices():
         })
     return jsonify(result)
 
+# Flask 서버 스레드 시작
+def run_flask():
+    app.run(debug=True, use_reloader=False)
+
 # Discord 봇 설정
 intents = discord.Intents.default()
 intents.message_content = True
