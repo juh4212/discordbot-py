@@ -6,10 +6,10 @@ import re
 import discord
 from discord.ext import commands
 from discord import app_commands
-import threading
 from flask import Flask, jsonify
 from dotenv import load_dotenv
 import schedule
+import threading
 import time
 
 # 환경 변수 로드
@@ -235,9 +235,6 @@ async def load_list(interaction: discord.Interaction):
     creature_data = fetch_creature_prices()
     if creature_data:
         update_database(creature_data)
-        # prices 컬렉션을 갱신합니다.
-        for creature in creature_data:
-            db.creatures.update_one({'name': creature['name']}, {'$set': {'shoom_price': creature['value']}}, upsert=True)
         await interaction.followup.send("Creature prices have been loaded and updated successfully.")
     else:
         await interaction.followup.send("Failed to load creature prices from the website.")
