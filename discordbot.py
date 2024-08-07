@@ -314,7 +314,7 @@ def save_prices(prices):
             prices_collection.update_one({'item': item}, {'$set': {'shoom_price': price['슘 시세'], 'cash_price': price['현금 시세']}}, upsert=True)
         print("Prices saved successfully")
     except Exception as e:
-        print(f'Error saving prices: {e}')
+        print("Error saving prices: {e}")
 
 # 모든 기능 실행
 if __name__ == '__main__':
