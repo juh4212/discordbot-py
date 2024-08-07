@@ -40,26 +40,28 @@ def fetch_creature_prices():
 
     creature_data = []
 
-    table = soup.find('table')
-    if not table:
+    # 테이블을 찾는 로직을 업데이트
+    tables = soup.find_all('table')
+    if not tables:
         print("Table not found in the web page.")
         return creature_data
 
-    rows = table.find_all('tr')[1:]
+    for table in tables:
+        rows = table.find_all('tr')[1:]
 
-    for row in rows:
-        cols = row.find_all('td')
-        if len(cols) >= 2:
-            name = cols[0].text.strip().lower()
-            value = cols[1].text.strip().lower()
-            
-            if '~' in value:
-                range_values = re.findall(r'\d+', value)
-                if range_values:
-                    median_value = (int(range_values[0]) + int(range_values[1])) / 2
-                    value = f"{median_value}k"
-            
-            creature_data.append({"name": name, "value": value})
+        for row in rows:
+            cols = row.find_all('td')
+            if len(cols) >= 2:
+                name = cols[0].text.strip().lower()
+                value = cols[1].text.strip().lower()
+                
+                if '~' in value:
+                    range_values = re.findall(r'\d+', value)
+                    if range_values:
+                        median_value = (int(range_values[0]) + int(range_values[1])) / 2
+                        value = f"{median_value}k"
+                
+                creature_data.append({"name": name, "value": value})
 
     return creature_data
 
@@ -314,7 +316,7 @@ def save_prices(prices):
             prices_collection.update_one({'item': item}, {'$set': {'shoom_price': price['슘 시세'], 'cash_price': price['현금 시세']}}, upsert=True)
         print("Prices saved successfully")
     except Exception as e:
-        print("Error saving prices: {e}")
+        print(f'Error saving prices: {e}')
 
 # 모든 기능 실행
 if __name__ == '__main__':
