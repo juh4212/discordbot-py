@@ -244,7 +244,7 @@ async def sell_message(interaction: discord.Interaction):
         prices_info = prices.get(item, {"현금 시세": "N/A"})
         cash_price = prices_info["현금 시세"]
         if cash_price != "N/A":
-            display_price = round_to_three_decimal_places(float(cash_price) * 0.0001)  # 소수점 네 번째 자리 반올림 적용
+            display_price = round_and_adjust(float(cash_price) * 0.0001)  # 소수점 네 번째 자리 반올림 및 조정 적용
         else:
             display_price = "N/A"
         items_message += f"• {item.title()} {display_price} (재고 {quantity})\n"
