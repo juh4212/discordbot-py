@@ -10,7 +10,7 @@ from discord import app_commands
 from dotenv import load_dotenv
 import threading
 import time
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP  # ROUND_HALF_UP 추가
 
 # 환경 변수 로드
 load_dotenv()
