@@ -10,7 +10,7 @@ from discord import app_commands
 from dotenv import load_dotenv
 import threading
 import time
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 
 # 환경 변수 로드
 load_dotenv()
@@ -42,16 +42,20 @@ headers = {
     'Accept-Language': 'en-US,en;q=0.9'
 }
 
-# 소수점 셋째 자리를 반올림하여 둘째 자리로 올리고, 0 또는 5로 설정하는 함수
-def round_to_nearest_0_or_5(value):
-    # 소수점 셋째 자리를 반올림하여 두 자리로 만듭니다.
-    rounded_value = Decimal(value).quantize(Decimal('0.00'), rounding=ROUND_HALF_UP)
-    # 두 번째 자리 숫자를 추출합니다.
+# 소수점 셋째 자리를 반올림하여 둘째 자리로 올리고, 0, 2, 또는 5로 설정하는 함수
+def round_to_nearest(value):
+    rounded_value = Decimal(value).quantize(Decimal('0.00'))
     second_digit = int(rounded_value * 100) % 10
-    if second_digit in {1, 2, 3, 4}:
-        rounded_value = rounded_value - Decimal('0.01') + Decimal('0.05')
-    elif second_digit in {6, 7, 8, 9}:
-        rounded_value = rounded_value + Decimal('0.05')
+    
+    if second_digit <= 2:
+        rounded_value = rounded_value - Decimal(second_digit) / 100
+    elif second_digit <= 4:
+        rounded_value = rounded_value - Decimal(second_digit) / 100 + Decimal('0.05')
+    elif second_digit <= 7:
+        rounded_value = rounded_value - Decimal(second_digit) / 100 + Decimal('0.05')
+    else:
+        rounded_value = rounded_value + Decimal('0.1') - Decimal(second_digit) / 100
+    
     return float(rounded_value)
 
 # 크리쳐 가격 정보를 웹 스크래핑하는 함수
@@ -224,7 +228,7 @@ async def sell_message(interaction: discord.Interaction):
         prices_info = prices.get(item, {"현금 시세": "N/A"})
         cash_price = prices_info["현금 시세"]
         if cash_price != "N/A":
-            display_price = round_to_nearest_0_or_5(float(cash_price) * 0.0001)  # 수정된 반올림 함수 적용
+            display_price = round_to_nearest(float(cash_price) * 0.0001)  # 수정된 반올림 함수 적용
         else:
             display_price = "N/A"
         creatures_message += f"• {item.title()} {display_price} (재고 {quantity})\n"
