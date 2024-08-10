@@ -10,7 +10,7 @@ from discord import app_commands
 from dotenv import load_dotenv
 import threading
 import time
-from decimal import Decimal, ROUND_HALF_UP  # ROUND_HALF_UP 추가
+from decimal import Decimal, ROUND_HALF_UP
 
 # 환경 변수 로드
 load_dotenv()
@@ -58,9 +58,21 @@ def round_to_nearest(value):
     
     return float(rounded_value)
 
-# 소수점 넷째 자리를 반올림하여 세 번째 자리로 만드는 함수
-def round_to_three_decimal_places(value):
-    return float(Decimal(value).quantize(Decimal('0.000'), rounding=ROUND_HALF_UP))
+# 소수점 네 번째 자리를 반올림하고 세 번째 자리를 0, 2, 5로 조정하는 함수
+def round_and_adjust(value):
+    rounded_value = Decimal(value).quantize(Decimal('0.000'), rounding=ROUND_HALF_UP)
+    third_digit = int(rounded_value * 1000) % 10
+    
+    if third_digit <= 2:
+        adjusted_value = rounded_value - Decimal(third_digit) / 1000
+    elif third_digit <= 4:
+        adjusted_value = rounded_value - Decimal(third_digit) / 1000 + Decimal('0.002')
+    elif third_digit <= 7:
+        adjusted_value = rounded_value - Decimal(third_digit) / 1000 + Decimal('0.005')
+    else:
+        adjusted_value = rounded_value + Decimal('0.01') - Decimal(third_digit) / 1000
+
+    return float(adjusted_value)
 
 # 크리쳐 가격 정보를 웹 스크래핑하는 함수
 def fetch_creature_prices():
