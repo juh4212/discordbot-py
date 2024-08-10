@@ -58,9 +58,9 @@ def round_to_nearest(value):
     
     return float(rounded_value)
 
-# 소수점 넷째 자리를 제거하는 함수
-def truncate_to_three_decimal_places(value):
-    return float(Decimal(value).quantize(Decimal('0.000')))
+# 소수점 넷째 자리를 반올림하여 세 번째 자리로 만드는 함수
+def round_to_three_decimal_places(value):
+    return float(Decimal(value).quantize(Decimal('0.000'), rounding=ROUND_HALF_UP))
 
 # 크리쳐 가격 정보를 웹 스크래핑하는 함수
 def fetch_creature_prices():
@@ -244,7 +244,7 @@ async def sell_message(interaction: discord.Interaction):
         prices_info = prices.get(item, {"현금 시세": "N/A"})
         cash_price = prices_info["현금 시세"]
         if cash_price != "N/A":
-            display_price = truncate_to_three_decimal_places(float(cash_price) * 0.0001)  # 소수점 네 번째 자리 삭제 적용
+            display_price = round_to_three_decimal_places(float(cash_price) * 0.0001)  # 소수점 네 번째 자리 반올림 적용
         else:
             display_price = "N/A"
         items_message += f"• {item.title()} {display_price} (재고 {quantity})\n"
