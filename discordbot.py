@@ -207,34 +207,35 @@ async def show_inventory(interaction: discord.Interaction):
 @bot.tree.command(name='sell_message', description='Generate the sell message.')
 async def sell_message(interaction: discord.Interaction):
     """판매 메시지를 생성합니다."""
-    creatures_message = "ㅡㅡ소나리아ㅡㅡ\n\n계좌로 팔아요!!\n\n<크리쳐>\n"
-    items_message = "\n<아이템>\n"
+    rate_message = "슘 1K당 0.07\n"  # 새로운 환율 정보
+    creatures_message = "ㅡㅡ소나리아ㅡㅡ\n\n계좌로 팔아요!!\n\n" + rate_message + "<크리쳐>\n"
 
-    # Creatures 목록 추가
+    # 크리처 목록을 순회하면서 메시지 구성
     for item in creatures:
         quantity = inventory.get(item, "N/A")
         prices_info = prices.get(item, {"현금 시세": "N/A"})
         cash_price = prices_info["현금 시세"]
         if cash_price != "N/A":
-            display_price = round_to_nearest_0_or_5(float(cash_price) * 0.0001)
+            display_price = round_to_nearest_0_or_5(float(cash_price) * 0.0001)  # 소수점 반올림 함수 사용
         else:
             display_price = "N/A"
         creatures_message += f"• {item.title()} {display_price} (재고 {quantity})\n"
 
-    # Items 목록 추가
+    # 아이템 목록 메시지 구성
+    items_message = "\n<아이템>\n"
     for item in items:
         quantity = inventory.get(item, "N/A")
         prices_info = prices.get(item, {"현금 시세": "N/A"})
         cash_price = prices_info["현금 시세"]
         if cash_price != "N/A":
-            display_price = round_to_nearest_0_or_5(float(cash_price) * 0.0001)
+            display_price = round_to_nearest_0_or_5(float(cash_price) * 0.0001)  # 소수점 반올림 함수 사용
         else:
             display_price = "N/A"
         items_message += f"• {item.title()} {display_price} (재고 {quantity})\n"
 
     # 필수 메시지 추가
     final_message = creatures_message + items_message + "\n• 문상 X  계좌 O\n• 구매를 원하시면 갠으로! \n• 재고는 갠디로 와서 물어봐주세요!"
-    
+
     await interaction.response.send_message(final_message)
 
 # 슬래시 명령어를 추가하기 위해 bot에 명령어를 등록
