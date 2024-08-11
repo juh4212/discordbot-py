@@ -32,6 +32,9 @@ creatures = [
 ]
 items = ["death gacha token", "revive token", "max growth token", "partial growth token", "strong glimmer token", "appearance change token"]
 
+# 할인된 가격을 저장할 변수
+discounted_prices = {}
+
 # 타임 슬립과 랜덤 유니폼 적용
 def random_sleep(min_sleep=3, max_sleep=5):
     time.sleep(random.uniform(min_sleep, max_sleep))
@@ -78,33 +81,36 @@ def round_and_adjust(value):
 def fetch_creature_prices():
     url = 'https://www.game.guide/creatures-of-sonaria-value-list'
     response = requests.get(url, headers=headers)
-    soup = BeautifulSoup(response.text, 'html.parser')
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.text, 'html.parser')
 
-    creature_data = []
+        creature_data = []
 
-    table = soup.find('table')
-    if not table:
-        print("Table not found in the web page.")
+        table = soup.find('table')
+        if not table:
+            print("Table not found in the web page.")
+            return creature_data
+
+        rows = table.find_all('tr')[1:]
+
+        for row in rows:
+            random_sleep()  # 각 요청 사이에 랜덤한 대기 시간 추가
+            cols = row.find_all('td')
+            if len(cols) >= 2:
+                name = cols[0].text.strip().lower()
+                value = cols[1].text.strip().lower()
+
+                if '~' in value:
+                    range_values = re.findall(r'\d+', value)
+                    if range_values:
+                        median_value = (int(range_values[0]) + int(range_values[1])) / 2
+                        value = f"{median_value}k"
+
+                creature_data.append({"name": name, "value": value})
+
         return creature_data
-
-    rows = table.find_all('tr')[1:]
-
-    for row in rows:
-        random_sleep()  # 각 요청 사이에 랜덤한 대기 시간 추가
-        cols = row.find_all('td')
-        if len(cols) >= 2:
-            name = cols[0].text.strip().lower()
-            value = cols[1].text.strip().lower()
-            
-            if '~' in value:
-                range_values = re.findall(r'\d+', value)
-                if range_values:
-                    median_value = (int(range_values[0]) + int(range_values[1])) / 2
-                    value = f"{median_value}k"
-            
-            creature_data.append({"name": name, "value": value})
-
-    return creature_data
+    else:
+        return []
 
 # MongoDB 업데이트 함수
 def update_database(creature_data):
@@ -120,7 +126,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 async def fetch_prices_from_api():
     url = 'http://localhost:5000/creature_prices'
     response = requests.get(url)
-    if response.status_code == 200:  
+    if response.status_code == 200:
         return response.json()
     else:
         return []
@@ -235,6 +241,7 @@ async def show_inventory(interaction: discord.Interaction):
 @bot.tree.command(name='discount', description='Apply a discount to all creatures.')
 @app_commands.describe(discount_percentage='The discount percentage to apply (0-100)')
 async def discount_creatures(interaction: discord.Interaction, discount_percentage: int):
+    global discounted_prices  # 전역 변수로 접근
     if 0 <= discount_percentage <= 100:
         discount_factor = 1 - (discount_percentage / 100)
         discounted_prices = {}
@@ -264,7 +271,7 @@ async def sell_message(interaction: discord.Interaction):
     for item in creatures:
         quantity = inventory.get(item, "N/A")
         prices_info = prices.get(item, {"현금 시세": "N/A"})
-        cash_price = prices_info["현금 시세"]
+        cash_price = discounted_prices.get(item, prices_info["현금 시세"])  # 할인된 가격 사용
         if cash_price != "N/A":
             display_price = round_to_nearest(float(cash_price) * 0.0001)  # 수정된 반올림 함수 적용
         else:
