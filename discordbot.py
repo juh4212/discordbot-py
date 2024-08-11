@@ -120,7 +120,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 async def fetch_prices_from_api():
     url = 'http://localhost:5000/creature_prices'
     response = requests.get(url)
-    if response.status_code == 200:
+    if response.status_code == 200):
         return response.json()
     else:
         return []
@@ -230,6 +230,28 @@ async def show_inventory(interaction: discord.Interaction):
 
     # 임베드 메시지를 디스코드에 전송
     await interaction.response.send_message(embeds=[embed1, embed2, embed3])
+
+# 슬래시 커맨드: 할인 적용
+@bot.tree.command(name='discount', description='Apply a discount to all creatures.')
+@app_commands.describe(discount_percentage='The discount percentage to apply (0-100)')
+async def discount_creatures(interaction: discord.Interaction, discount_percentage: int):
+    if 0 <= discount_percentage <= 100:
+        discount_factor = 1 - (discount_percentage / 100)
+        discounted_prices = {}
+        for creature in creatures:
+            if creature in prices:
+                original_price = float(prices[creature]["현금 시세"])
+                discounted_price = round_to_nearest(original_price * discount_factor)
+                discounted_prices[creature] = discounted_price
+
+        # 결과 메시지 구성
+        discount_message = "할인이 적용된 시세:\n"
+        for creature, price in discounted_prices.items():
+            discount_message += f"• {creature.title()} - 할인된 시세: {price}원\n"
+
+        await interaction.response.send_message(discount_message)
+    else:
+        await interaction.response.send_message("할인율은 0과 100 사이의 값이어야 합니다.")
 
 # 슬래시 커맨드: 판매 메시지 생성
 @bot.tree.command(name='sell_message', description='Generate the sell message.')
