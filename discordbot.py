@@ -137,10 +137,10 @@ async def on_ready():
     try:
         inventory = load_inventory()
         prices = load_prices()
-        print(f'Logged in as {bot.user.name} - Inventory and prices loaded.')
+        print(f'{bot.user.name}에 로그인되었습니다 - 인벤토리와 가격 정보가 로드되었습니다.')
         await setup_slash_commands()
     except Exception as e:
-        print(f'Error in on_ready: {e}')
+        print(f'on_ready에서 오류 발생: {e}')
 
 @bot.command(name='price')
 async def fetch_price(ctx, *, creature_name: str):
@@ -150,7 +150,7 @@ async def fetch_price(ctx, *, creature_name: str):
             value = creature['shoom_price']
             await ctx.send(f"{creature['name'].title()} - 중간값: {value}")
             return
-    await ctx.send(f"Creature {creature_name} not found.")
+    await ctx.send(f"크리쳐 {creature_name}을(를) 찾을 수 없습니다.")
 
 # 자동 완성 기능 구현
 async def autocomplete_items(interaction: discord.Interaction, current: str):
@@ -159,8 +159,8 @@ async def autocomplete_items(interaction: discord.Interaction, current: str):
     return [app_commands.Choice(name=item, value=item) for item in all_items if current.lower() in item.lower()][:25]
 
 # 슬래시 커맨드: 아이템 추가
-@bot.tree.command(name='add', description='Add items to the inventory.')
-@app_commands.describe(item='The item to add', quantity='The quantity to add')
+@bot.tree.command(name='add', description='인벤토리에 아이템을 추가합니다.')
+@app_commands.describe(item='추가할 아이템', quantity='추가할 수량')
 @app_commands.autocomplete(item=autocomplete_items)
 async def add_item(interaction: discord.Interaction, item: str, quantity: int):
     if item in creatures + items:
@@ -170,13 +170,13 @@ async def add_item(interaction: discord.Interaction, item: str, quantity: int):
         else:
             inventory[item] = int(current_quantity) + quantity
         save_inventory(inventory)
-        await interaction.response.send_message(f'Item "{item}" added: {quantity} units.')
+        await interaction.response.send_message(f'아이템 "{item}" 추가됨: {quantity}개.')
     else:
-        await interaction.response.send_message(f'Item "{item}" is not recognized.')
+        await interaction.response.send_message(f'아이템 "{item}"을(를) 인식할 수 없습니다.')
 
 # 슬래시 커맨드: 아이템 제거
-@bot.tree.command(name='remove', description='Remove items from the inventory.')
-@app_commands.describe(item='The item to remove', quantity='The quantity to remove')
+@bot.tree.command(name='remove', description='인벤토리에서 아이템을 제거합니다.')
+@app_commands.describe(item='제거할 아이템', quantity='제거할 수량')
 @app_commands.autocomplete(item=autocomplete_items)
 async def remove_item(interaction: discord.Interaction, item: str, quantity: int):
     if item in creatures + items:
@@ -184,15 +184,15 @@ async def remove_item(interaction: discord.Interaction, item: str, quantity: int
         if current_quantity != "N/A" and int(current_quantity) >= quantity:
             inventory[item] = int(current_quantity) - quantity
             save_inventory(inventory)
-            await interaction.response.send_message(f'Item "{item}" removed: {quantity} units.')
+            await interaction.response.send_message(f'아이템 "{item}" 제거됨: {quantity}개.')
         else:
-            await interaction.response.send_message(f'Not enough "{item}" in inventory.')
+            await interaction.response.send_message(f'인벤토리에 "{item}"이(가) 충분하지 않습니다.')
     else:
-        await interaction.response.send_message(f'Item "{item}" is not recognized.')
+        await interaction.response.send_message(f'아이템 "{item}"을(를) 인식할 수 없습니다.')
 
 # 슬래시 커맨드: 시세 업데이트
-@bot.tree.command(name='price', description='Update the price of an item.')
-@app_commands.describe(item='The item to update the price for', shoom_price='The new shoom price of the item')
+@bot.tree.command(name='price', description='아이템의 시세를 업데이트합니다.')
+@app_commands.describe(item='시세를 업데이트할 아이템', shoom_price='새로운 슘 시세')
 @app_commands.autocomplete(item=autocomplete_items)
 async def update_price(interaction: discord.Interaction, item: str, shoom_price: int):
     global prices  # 전역 변수로 접근하여 업데이트
@@ -205,7 +205,7 @@ async def update_price(interaction: discord.Interaction, item: str, shoom_price:
         await interaction.response.send_message(f'아이템 "{item}"은(는) 사용할 수 없는 아이템입니다.')
 
 # 슬래시 커맨드: 현재 재고 확인
-@bot.tree.command(name='inventory', description='Show the current inventory with prices.')
+@bot.tree.command(name='inventory', description='현재 인벤토리와 가격을 보여줍니다.')
 async def show_inventory(interaction: discord.Interaction):
     embed1 = discord.Embed(title="현재 재고 목록 (Creatures Part 1)", color=discord.Color.blue())
     embed2 = discord.Embed(title="현재 재고 목록 (Creatures Part 2)", color=discord.Color.blue())
@@ -239,8 +239,8 @@ async def show_inventory(interaction: discord.Interaction):
     await interaction.response.send_message(embeds=[embed1, embed2, embed3])
 
 # 슬래시 커맨드: 할인 적용
-@bot.tree.command(name='discount', description='Apply a discount to all creatures.')
-@app_commands.describe(discount_percentage='The discount percentage to apply (0-100)')
+@bot.tree.command(name='discount', description='모든 크리처에 할인을 적용합니다.')
+@app_commands.describe(discount_percentage='적용할 할인율 (0-100)')
 async def discount_creatures(interaction: discord.Interaction, discount_percentage: int):
     global discounted_prices  # 전역 변수로 접근
     if 0 <= discount_percentage <= 100:
@@ -262,7 +262,7 @@ async def discount_creatures(interaction: discord.Interaction, discount_percenta
         await interaction.response.send_message("할인율은 0과 100 사이의 값이어야 합니다.")
 
 # 슬래시 커맨드: 판매 메시지 생성
-@bot.tree.command(name='sell_message', description='Generate the sell message.')
+@bot.tree.command(name='sell_message', description='판매 메시지를 생성합니다.')
 async def sell_message(interaction: discord.Interaction):
     """판매 메시지를 생성합니다."""
     rate_message = "슘 1K당 0.07\n"  # 새로운 환율 정보
@@ -297,15 +297,15 @@ async def sell_message(interaction: discord.Interaction):
     await interaction.response.send_message(final_message)
 
 # 슬래시 커맨드: 구매 메시지 생성
-@bot.tree.command(name='buy_message', description='Generate the buy message.')
+@bot.tree.command(name='buy_message', description='구매 메시지를 생성합니다.')
 async def buy_message(interaction: discord.Interaction):
     """구매 메시지를 생성합니다."""
     buy_message = "ㅡㅡ소나리아ㅡㅡ\n"
 
-    # 크리처 목록을 순회하면서 재고가 1 이상인 경우 메시지 구성
+    # 크리처 목록을 순회하면서 재고가 0~1인 경우 메시지 구성
     for creature in creatures:
         quantity = inventory.get(creature, 0)  # inventory에서 최신 정보 가져오기
-        if quantity >= 1:
+        if 0 <= quantity <= 1:
             buy_message += f"{creature.title()}\n"
 
     # 필수 문장 추가
@@ -319,7 +319,7 @@ async def setup_slash_commands():
     guild = discord.Object(id=os.getenv('GUILD_ID'))
     bot.tree.copy_global_to(guild=guild)
     await bot.tree.sync(guild=guild)
-    print(f'Slash commands synced for guild ID: {guild.id}')
+    print(f'길드 ID: {guild.id}에 슬래시 명령어가 동기화되었습니다.')
 
 # 데이터 로드 함수
 def load_inventory():
@@ -331,16 +331,16 @@ def load_inventory():
                 inventory[item] = "N/A"
         return inventory
     except Exception as e:
-        print(f'Error loading inventory: {e}')
+        print(f'인벤토리 로드 중 오류 발생: {e}')
         return {item: "N/A" for item in creatures + items}
 
 def save_inventory(inventory):
     try:
         for item, quantity in inventory.items():
             inventory_collection.update_one({'item': item}, {'$set': {'quantity': quantity}}, upsert=True)
-        print("Inventory saved successfully")
+        print("인벤토리가 성공적으로 저장되었습니다")
     except Exception as e:
-        print(f'Error saving inventory: {e}')
+        print(f'인벤토리 저장 중 오류 발생: {e}')
 
 def load_prices():
     try:
@@ -351,16 +351,16 @@ def load_prices():
                 prices[item] = {'슘 시세': "N/A", '현금 시세': "N/A"}
         return prices
     except Exception as e:
-        print(f'Error loading prices: {e}')
+        print(f'시세 로드 중 오류 발생: {e}')
         return {item: {'슘 시세': "N/A", '현금 시세': "N/A"} for item in creatures + items}
 
 def save_prices(prices):
     try:
         for item, price in prices.items():
             prices_collection.update_one({'item': item}, {'$set': {'shoom_price': price['슘 시세'], 'cash_price': price['현금 시세']}}, upsert=True)
-        print("Prices saved successfully")
+        print("시세가 성공적으로 저장되었습니다")
     except Exception as e:
-        print(f'Error saving prices: {e}')
+        print(f'시세 저장 중 오류 발생: {e}')
 
 # 모든 기능 실행
 if __name__ == '__main__':
