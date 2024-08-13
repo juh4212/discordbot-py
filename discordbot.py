@@ -270,7 +270,7 @@ async def sell_message(interaction: discord.Interaction):
 
     # 크리처 목록을 순회하면서 메시지 구성
     for item in creatures:
-        quantity = inventory.get(item, "N/A")
+        quantity = inventory.get(item, 0)  # inventory에서 최신 정보 가져오기
         prices_info = prices.get(item, {"현금 시세": "N/A"})
         cash_price = discounted_prices.get(item, prices_info["현금 시세"])  # 할인된 가격 사용
         if cash_price != "N/A":
@@ -282,7 +282,7 @@ async def sell_message(interaction: discord.Interaction):
     # 아이템 목록 메시지 구성
     items_message = "\n<아이템>\n"
     for item in items:
-        quantity = inventory.get(item, "N/A")
+        quantity = inventory.get(item, 0)  # inventory에서 최신 정보 가져오기
         prices_info = prices.get(item, {"현금 시세": "N/A"})
         cash_price = prices_info["현금 시세"]
         if cash_price != "N/A":
