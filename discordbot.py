@@ -296,6 +296,24 @@ async def sell_message(interaction: discord.Interaction):
 
     await interaction.response.send_message(final_message)
 
+# 슬래시 커맨드: 구매 메시지 생성
+@bot.tree.command(name='buy_message', description='Generate the buy message.')
+async def buy_message(interaction: discord.Interaction):
+    """구매 메시지를 생성합니다."""
+    buy_message = "ㅡㅡ소나리아ㅡㅡ\n"
+
+    # 크리처 목록을 순회하면서 재고가 1 이상인 경우 메시지 구성
+    for creature in creatures:
+        quantity = inventory.get(creature, 0)  # inventory에서 최신 정보 가져오기
+        if quantity >= 1:
+            buy_message += f"{creature.title()}\n"
+
+    # 필수 문장 추가
+    buy_message += "\n슘으로 구합니다\n정가 정도에 다 삽니다\n갠으로 제시 주세요"
+
+    # 메시지를 전송
+    await interaction.response.send_message(buy_message)
+
 # 슬래시 명령어를 추가하기 위해 bot에 명령어를 등록
 async def setup_slash_commands():
     guild = discord.Object(id=os.getenv('GUILD_ID'))
