@@ -195,6 +195,7 @@ async def remove_item(interaction: discord.Interaction, item: str, quantity: int
 @app_commands.describe(item='The item to update the price for', shoom_price='The new shoom price of the item')
 @app_commands.autocomplete(item=autocomplete_items)
 async def update_price(interaction: discord.Interaction, item: str, shoom_price: int):
+    global prices  # 전역 변수로 접근하여 업데이트
     if item in creatures + items:
         prices[item]["슘 시세"] = shoom_price
         prices[item]["현금 시세"] = shoom_price * 0.7
