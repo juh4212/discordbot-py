@@ -302,11 +302,13 @@ async def buy_message(interaction: discord.Interaction):
     """구매 메시지를 생성합니다."""
     buy_message = "ㅡㅡ소나리아ㅡㅡ\n"
 
-    # 크리처 목록을 순회하면서 재고가 0~1인 경우 메시지 구성
-    for creature in creatures:
-        quantity = inventory.get(creature, 0)  # inventory에서 최신 정보 가져오기
-        if 0 <= quantity <= 1:
-            buy_message += f"{creature.title()}\n"
+    # 재고가 있는 크리처 목록을 생성
+    available_creatures = [creature for creature in creatures if 0 < inventory.get(creature, 0) <= 1]
+
+    # 두 마리씩 묶어서 메시지 구성
+    for i in range(0, len(available_creatures), 2):
+        pair = ', '.join(available_creatures[i:i + 2])
+        buy_message += f"{pair}\n"
 
     # 필수 문장 추가
     buy_message += "\n슘으로 구합니다\n정가 정도에 다 삽니다\n갠으로 제시 주세요"
