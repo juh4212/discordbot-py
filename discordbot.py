@@ -303,11 +303,17 @@ async def buy_message(interaction: discord.Interaction):
     # 필수 문장 추가
     buy_message_content = "ㅡㅡ소나리아ㅡㅡ\n\n"  # 필수 문장
 
-    # 재고가 1 이상인 크리쳐 목록 추가
+    # 재고가 0~1 사이인 크리쳐 목록 추가
+    creature_lines = []
     for item in creatures:
         quantity = inventory.get(item, 0)
-        if quantity and quantity != "N/A" and int(quantity) >= 1:
-            buy_message_content += f"{item.title()}\n"  # 재고가 1 이상인 크리쳐만 추가
+        if quantity != "N/A" and 0 <= int(quantity) <= 1:
+            creature_lines.append(item.title())  # 재고가 0~1 사이인 크리쳐만 추가
+
+    # 두 개씩 묶어 한 줄에 추가
+    for i in range(0, len(creature_lines), 2):
+        line = ", ".join(creature_lines[i:i + 2])
+        buy_message_content += f"{line}\n"
 
     # 필수 문장 추가
     buy_message_content += "\n슘으로 구합니다\n정가 정도에 다 삽니다\n갠으로 제시 주세요"
