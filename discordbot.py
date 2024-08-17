@@ -22,13 +22,13 @@ db = client.creatures_db
 inventory_collection = db['inventory']
 prices_collection = db['prices']
 
-# 고정된 아이템 목록
+# 고정된 아이템 목록 (영어 순으로 정렬, 새로운 항목 추가)
 creatures = [
-    "angelic warden", "aolenus", "ardor warden", "boreal warden", "caldonterrus", "corsarlett", 
-    "eigion warden", "ghartokus", "golgaroth", "hellion warden", "jhiggo jangl", "jotunhel", 
-    "luxces", "lus adarch", "magnacetus", "menace", "mijusuima", "nolumoth", "pacedegon", 
-    "parahexilian", "sang toare", "takamorath", "umbraxi", "urzuk", "verdent warden", 
-    "voletexius", "whispthera", "woodralone", "yohsog"
+    "aidoneiscus", "angelic warden", "aolenus", "ardor warden", "boreal warden", "caldonterrus", 
+    "corsarlett", "cuxena", "eigion warden", "garra warden", "ghartokus", "golgaroth", 
+    "hellion warden", "jhiggo jangl", "jotunhel", "luxces", "lus adarch", "magnacetus", 
+    "menace", "mijusuima", "nolumoth", "pacedegon", "parahexilian", "sang toare", "takamorath", 
+    "umbraxi", "urzuk", "verdent warden", "voletexius", "whispthera", "woodralone", "yohsog"
 ]
 items = ["death gacha token", "revive token", "max growth token", "partial growth token", "strong glimmer token", "appearance change token"]
 
@@ -372,3 +372,4 @@ def save_prices(prices):
 # 모든 기능 실행
 if __name__ == '__main__':
     bot.run(os.getenv('DISCORD_BOT_TOKEN'))
+
