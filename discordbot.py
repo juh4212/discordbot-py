@@ -292,7 +292,7 @@ async def sell_message(interaction: discord.Interaction):
         items_message += f"• {item.title()} {display_price} (재고 {quantity})\n"
 
     # 필수 메시지 추가
-    final_message = creatures_message + items_message + "\n• 문상 X  계좌 O\n• 구매를 원하시면 갠으로! \n• 재고는 갠디로 와서 물어봐주세요!"
+    final_message = creatures_message + items_message + "\n• 문상 X  계좌 O\n• 구매를 원하시면 갠으로! \n• 재고를 확 후 갠오세요!"
 
     await interaction.response.send_message(final_message)
 
