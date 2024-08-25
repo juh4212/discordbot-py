@@ -36,11 +36,11 @@ def round_to_nearest(value):
     rounded_value = Decimal(value).quantize(Decimal('0.00'))
     second_digit = int(rounded_value * 100) % 10
     
-    if second_digit <= 2:
+    if (second_digit <= 2):
         rounded_value = rounded_value - Decimal(second_digit) / 100
-    elif second_digit <= 4:
+    elif (second_digit <= 4):
         rounded_value = rounded_value - Decimal(second_digit) / 100 + Decimal('0.05')
-    elif second_digit <= 7:
+    elif (second_digit <= 7):
         rounded_value = rounded_value - Decimal(second_digit) / 100 + Decimal('0.05')
     else:
         rounded_value = rounded_value + Decimal('0.1') - Decimal(second_digit) / 100
@@ -52,11 +52,11 @@ def round_and_adjust(value):
     rounded_value = Decimal(value).quantize(Decimal('0.000'), rounding=ROUND_HALF_UP)
     third_digit = int(rounded_value * 1000) % 10
     
-    if third_digit <= 2:
+    if (third_digit <= 2):
         adjusted_value = rounded_value - Decimal(third_digit) / 1000
-    elif third_digit <= 4:
+    elif (third_digit <= 4):
         adjusted_value = rounded_value - Decimal(third_digit) / 1000 + Decimal('0.002')
-    elif third_digit <= 7:
+    elif (third_digit <= 7):
         adjusted_value = rounded_value - Decimal(third_digit) / 1000 + Decimal('0.005')
     else:
         adjusted_value = rounded_value + Decimal('0.01') - Decimal(third_digit) / 1000
@@ -191,6 +191,7 @@ async def record_sales(
 ):
     nickname = interaction.user.display_name
     item_details = []
+    item_summary = defaultdict(list)  # 구매자별 아이템 요약
     
     # 모든 아이템과 수량을 확인하여 판매 기록에 추가
     for i in range(1, 6):
@@ -202,71 +203,27 @@ async def record_sales(
                 await interaction.response.send_message(f"재고가 부족합니다. 현재 {item_name}의 재고는 {current_quantity}개입니다.")
                 return
             inventory_collection.update_one({'item': item_name}, {'$inc': {'quantity': -quantity}})
-            item_details.append({"item_name": item_name, "quantity": quantity})
+            item_summary[buyer_name].append((item_name, quantity))
     
-    # 판매 기록 전송
-    sales_message = ""
-    for item in item_details:
+    # 판매 기록 저장
+    for buyer, items in item_summary.items():
+        item_list = ', '.join([f"{name} - {qty}개" for name, qty in items])
         sale_entry = {
             "nickname": nickname,
-            "item_name": item['item_name'],
-            "quantity": item['quantity'],
-            "amount": round(amount / len(item_details)),  # 총액을 정수로 나누어 저장
-            "buyer_name": buyer_name,
+            "item_summary": item_list,
+            "amount": round(amount / len(item_summary)),  # 총액을 정수로 나누어 저장
+            "buyer_name": buyer,
             "timestamp": interaction.created_at
         }
         sales_collection.insert_one(sale_entry)
-        sales_message += f"{item['item_name']} - {item['quantity']}개 - {sale_entry['amount']}원 - 구매자: {buyer_name}\n"
 
-    await interaction.response.send_message(sales_message.strip())
+    # 메시지 출력
+    response_message = ""
+    for buyer, items in item_summary.items():
+        item_list = ', '.join([f"{name} - {qty}개" for name, qty in items])
+        response_message += f"{item_list} - {round(amount)}원 - 구매자: {buyer}\n"
 
-# 슬래시 커맨드: 정산
-@bot.tree.command(name='정산', description='모든 판매 내역을 정산하고, 유저별 총 금액을 표시합니다.')
-async def finalize_sales(interaction: discord.Interaction):
-    sales_data = sales_collection.find({})
-    user_totals = defaultdict(float)
-    
-    for sale in sales_data:
-        user_totals[sale['nickname']] += sale['amount']
-    
-    response_message = "정산 완료\n"
-    for nickname, total in user_totals.items():
-        response_message += f"{nickname}: {total}원 (총 금액)\n"
-    
-    sales_collection.delete_many({})  # 정산 후 모든 판매 기록 삭제
     await interaction.response.send_message(response_message)
-
-# 슬래시 커맨드: 판매 기록 조회
-@bot.tree.command(name='판매기록', description='특정 사용자의 판매 기록을 조회합니다.')
-@app_commands.describe(nickname='조회할 디스코드 닉네임 (비워두면 모든 기록 조회)')
-async def view_sales(interaction: discord.Interaction, nickname: str = None):
-    if nickname:
-        sales_data = list(sales_collection.find({"nickname": nickname}))
-    else:
-        sales_data = list(sales_collection.find({}))
-    
-    if len(sales_data) == 0:
-        await interaction.response.send_message("판매 기록이 없습니다.")
-        return
-
-    # 사용자의 판매 기록을 분류하여 출력
-    user_sales = defaultdict(list)
-    user_totals = defaultdict(float)
-    
-    for sale in sales_data:
-        sale_text = f"{sale['item_name']} - {sale['quantity']}개 - {sale['amount']}원 - 구매자: {sale['buyer_name']}"
-        user_sales[sale['nickname']].append(sale_text)
-        user_totals[sale['nickname']] += sale['amount']
-
-    embeds = []
-    for user, sales in user_sales.items():
-        embed = discord.Embed(title=f"{user}님의 판매 기록", color=discord.Color.blue())
-        for sale in sales:
-            embed.add_field(name="\u200b", value=sale, inline=False)
-        embed.add_field(name="총 판매액", value=f"{round(user_totals[user])}원", inline=False)
-        embeds.append(embed)
-
-    await interaction.response.send_message(embeds=embeds)
 
 # 슬래시 명령어를 추가하기 위해 bot에 명령어를 등록
 async def setup_slash_commands():
