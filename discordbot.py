@@ -323,11 +323,12 @@ async def buy_message(interaction: discord.Interaction):
     # 최종 메시지 전송
     await interaction.response.send_message(buy_message_content)
 
-# 판매 커맨드: 여러 아이템 판매
 @bot.tree.command(name='판매', description='여러 종류의 아이템을 판매 기록에 추가합니다.')
-@app_commands.describe(item_name1='첫 번째 아이템 이름', quantity1='첫 번째 아이템 수량', item_name2='두 번째 아이템 이름', quantity2='두 번째 아이템 수량', amount='판매 금액', buyer_name='구매자 이름')
-@app_commands.autocomplete(item_name1=autocomplete_items, item_name2=autocomplete_items)
-async def record_sales(interaction: discord.Interaction, item_name1: str, quantity1: int, item_name2: str = None, quantity2: int = 0, amount: float = 0, buyer_name: str = ""):
+@app_commands.describe(item_name1='첫 번째 판매한 아이템 이름', quantity1='첫 번째 아이템의 갯수', 
+                       item_name2='두 번째 판매한 아이템 이름 (선택 사항)', quantity2='두 번째 아이템의 갯수 (선택 사항)',
+                       amount='총 판매 금액', buyer_name='구매자 이름')
+async def record_sales(interaction: discord.Interaction, item_name1: str, quantity1: int, 
+                       item_name2: str = None, quantity2: int = 0, amount: float = 0.0, buyer_name: str = None):
     nickname = interaction.user.display_name  # 명령어를 실행한 사용자의 닉네임
 
     # 첫 번째 아이템 처리
@@ -335,35 +336,33 @@ async def record_sales(interaction: discord.Interaction, item_name1: str, quanti
     if current_quantity1 == "N/A" or current_quantity1 < quantity1:
         await interaction.response.send_message(f"재고가 부족합니다. 현재 {item_name1}의 재고는 {current_quantity1}개입니다.")
         return
-    inventory[item_name1] -= quantity1
-    save_inventory(inventory)
-    sales_collection.insert_one({
-        "nickname": nickname,
-        "item_name": item_name1,
-        "quantity": quantity1,
-        "amount": amount / 2 if item_name2 else amount,
-        "buyer_name": buyer_name,
-        "timestamp": interaction.created_at
-    })
 
-    # 두 번째 아이템 처리 (선택 사항)
-    if item_name2 and quantity2 > 0:
+    inventory[item_name1] -= quantity1
+
+    # 두 번째 아이템이 있을 경우 처리
+    if item_name2:
         current_quantity2 = inventory.get(item_name2, "N/A")
         if current_quantity2 == "N/A" or current_quantity2 < quantity2:
             await interaction.response.send_message(f"재고가 부족합니다. 현재 {item_name2}의 재고는 {current_quantity2}개입니다.")
             return
         inventory[item_name2] -= quantity2
-        save_inventory(inventory)
-        sales_collection.insert_one({
-            "nickname": nickname,
-            "item_name": item_name2,
-            "quantity": quantity2,
-            "amount": amount / 2,
-            "buyer_name": buyer_name,
-            "timestamp": interaction.created_at
-        })
 
-    await interaction.response.send_message(f"판매 기록 완료: {nickname}님이 {item_name1} {quantity1}개 {f'와 {item_name2} {quantity2}개' if item_name2 else ''}을(를) {buyer_name}님에게 {amount}원에 판매했습니다.")
+    save_inventory(inventory)
+    
+    # 판매 기록 저장
+    sale_entry = {
+        "nickname": nickname,
+        "item_name1": item_name1,
+        "quantity1": quantity1,
+        "item_name2": item_name2,
+        "quantity2": quantity2,
+        "amount": amount,
+        "buyer_name": buyer_name,
+        "timestamp": interaction.created_at
+    }
+    sales_collection.insert_one(sale_entry)
+    await interaction.response.send_message(f"판매 기록 완료: {nickname}님이 {item_name1}, {item_name2}을(를) {buyer_name}님에게 총 {amount}원에 판매했습니다.")
+
 
 # 슬래시 커맨드: 정산
 @bot.tree.command(name='정산', description='모든 판매 내역을 정산하고, 유저별 총 금액을 표시합니다.')
