@@ -323,17 +323,25 @@ async def buy_message(interaction: discord.Interaction):
     # 최종 메시지 전송
     await interaction.response.send_message(buy_message_content)
 
-# 슬래시 커맨드: 판매 기록
-@bot.tree.command(name='판매', description='판매 기록을 추가합니다.')
-@app_commands.describe(item_name='판매한 아이템 이름', amount='판매 금액', buyer_name='구매자 이름')
-async def record_sale(interaction: discord.Interaction, item_name: str, amount: float, buyer_name: str):
-    nickname = interaction.user.display_name  # 명령어를 실행한 사용자의 닉네임
-    sale_entry = {
-        "nickname": nickname,
-        "item_name": item_name,
-        "amount": amount,
-        "buyer_name": buyer_name,
-        "timestamp": interaction.created_at
+# 슬래시 커맨드: 판매 기록 조회
+@bot.tree.command(name='판매기록', description='특정 사용자의 판매 기록을 조회합니다.')
+@app_commands.describe(nickname='조회할 디스코드 닉네임 (비워두면 모든 기록 조회)')
+async def view_sales(interaction: discord.Interaction, nickname: str = None):
+    if nickname:
+        sales_data = list(sales_collection.find({"nickname": nickname}))
+    else:
+        sales_data = list(sales_collection.find({}))
+    
+    if len(sales_data) == 0:
+        await interaction.response.send_message("판매 기록이 없습니다.")
+        return
+    
+    response_message = "판매 기록:\n"
+    for sale in sales_data:
+        response_message += f"{sale['nickname']} - {sale['item_name']} - {sale['amount']}원 - 구매자: {sale['buyer_name']} - {sale['timestamp']}\n"
+    
+    await interaction.response.send_message(response_message)
+
     }
     sales_collection.insert_one(sale_entry)
     await interaction.response.send_message(f"판매 기록 완료: {nickname}님이 {item_name}을(를) {buyer_name}님에게 {amount}에 판매했습니다.")
