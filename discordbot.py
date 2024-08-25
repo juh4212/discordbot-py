@@ -325,18 +325,29 @@ async def buy_message(interaction: discord.Interaction):
 
 # 슬래시 커맨드: 판매 기록
 @bot.tree.command(name='판매', description='판매 기록을 추가합니다.')
-@app_commands.describe(item_name='판매한 아이템 이름', amount='판매 금액', buyer_name='구매자 이름')
-async def record_sale(interaction: discord.Interaction, item_name: str, amount: float, buyer_name: str):
+@app_commands.describe(item_name='판매한 아이템 이름', quantity='판매한 아이템의 갯수', amount='판매 금액', buyer_name='구매자 이름')
+async def record_sale(interaction: discord.Interaction, item_name: str, quantity: int, amount: float, buyer_name: str):
     nickname = interaction.user.display_name  # 명령어를 실행한 사용자의 닉네임
+
+    # Inventory 업데이트: 판매된 수량을 제거
+    current_quantity = inventory.get(item_name, "N/A")
+    if current_quantity == "N/A" or current_quantity < quantity:
+        await interaction.response.send_message(f"재고가 부족합니다. 현재 {item_name}의 재고는 {current_quantity}개입니다.")
+        return
+    
+    inventory[item_name] -= quantity
+    save_inventory(inventory)
+    
     sale_entry = {
         "nickname": nickname,
         "item_name": item_name,
+        "quantity": quantity,
         "amount": amount,
         "buyer_name": buyer_name,
         "timestamp": interaction.created_at
     }
     sales_collection.insert_one(sale_entry)
-    await interaction.response.send_message(f"판매 기록 완료: {nickname}님이 {item_name}을(를) {buyer_name}님에게 {amount}에 판매했습니다.")
+    await interaction.response.send_message(f"판매 기록 완료: {nickname}님이 {item_name}을(를) {buyer_name}님에게 {amount}원에 판매했습니다.")
 
 # 슬래시 커맨드: 정산
 @bot.tree.command(name='정산', description='모든 판매 내역을 정산하고, 유저별 총 금액을 표시합니다.')
@@ -349,7 +360,7 @@ async def finalize_sales(interaction: discord.Interaction):
     
     response_message = "정산 완료\n"
     for nickname, total in user_totals.items():
-        response_message += f"{nickname}: {total} (총 금액)\n"
+        response_message += f"{nickname}: {total}원 (총 금액)\n"
     
     sales_collection.delete_many({})  # 정산 후 모든 판매 기록 삭제
     await interaction.response.send_message(response_message)
@@ -372,13 +383,13 @@ async def view_sales(interaction: discord.Interaction, nickname: str = None):
     user_totals = defaultdict(float)
     
     for sale in sales_data:
-        sale_text = f"{sale['nickname']} - {sale['item_name']} - {sale['amount']}원 - 구매자: {sale['buyer_name']}"
+        sale_text = f"{sale['item_name']} - {sale['quantity']}개 - {sale['amount']}원 - 구매자: {sale['buyer_name']}"
         user_sales[sale['nickname']].append(sale_text)
         user_totals[sale['nickname']] += sale['amount']
 
     embeds = []
     for user, sales in user_sales.items():
-        embed = discord.Embed(title=f"{user}의 판매 기록", color=discord.Color.blue())
+        embed = discord.Embed(title=f"{user}님의 판매 기록", color=discord.Color.blue())
         for sale in sales:
             embed.add_field(name="기록", value=sale, inline=False)
         embed.add_field(name="총 판매액", value=f"{user_totals[user]}원", inline=False)
