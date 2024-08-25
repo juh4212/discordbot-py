@@ -326,6 +326,7 @@ async def buy_message(interaction: discord.Interaction):
 # 슬래시 커맨드: 판매 기록
 @bot.tree.command(name='판매', description='판매 기록을 추가합니다.')
 @app_commands.describe(item_name='판매한 아이템 이름', quantity='판매한 아이템의 갯수', amount='판매 금액', buyer_name='구매자 이름')
+@app_commands.autocomplete(item_name=autocomplete_items)  # 자동 완성 추가
 async def record_sale(interaction: discord.Interaction, item_name: str, quantity: int, amount: float, buyer_name: str):
     nickname = interaction.user.display_name  # 명령어를 실행한 사용자의 닉네임
 
