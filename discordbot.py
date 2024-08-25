@@ -366,12 +366,25 @@ async def view_sales(interaction: discord.Interaction, nickname: str = None):
     if len(sales_data) == 0:
         await interaction.response.send_message("판매 기록이 없습니다.")
         return
+
+    # 사용자의 판매 기록을 분류하여 출력
+    user_sales = defaultdict(list)
+    user_totals = defaultdict(float)
     
-    response_message = "판매 기록:\n"
     for sale in sales_data:
-        response_message += f"{sale['nickname']} - {sale['item_name']} - {sale['amount']}원 - 구매자: {sale['buyer_name']} - {sale['timestamp']}\n"
-    
-    await interaction.response.send_message(response_message)
+        sale_text = f"{sale['nickname']} - {sale['item_name']} - {sale['amount']}원 - 구매자: {sale['buyer_name']}"
+        user_sales[sale['nickname']].append(sale_text)
+        user_totals[sale['nickname']] += sale['amount']
+
+    embeds = []
+    for user, sales in user_sales.items():
+        embed = discord.Embed(title=f"{user}의 판매 기록", color=discord.Color.blue())
+        for sale in sales:
+            embed.add_field(name="기록", value=sale, inline=False)
+        embed.add_field(name="총 판매액", value=f"{user_totals[user]}원", inline=False)
+        embeds.append(embed)
+
+    await interaction.response.send_message(embeds=embeds)
 
 # 슬래시 명령어를 추가하기 위해 bot에 명령어를 등록
 async def setup_slash_commands():
