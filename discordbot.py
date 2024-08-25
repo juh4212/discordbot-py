@@ -68,14 +68,6 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-async def fetch_prices_from_api():
-    url = 'http://localhost:5000/creature_prices'
-    response = requests.get(url)
-    if response.status_code == 200:
-        return response.json()
-    else:
-        return []
-
 @bot.event
 async def on_ready():
     global inventory, prices
@@ -86,16 +78,6 @@ async def on_ready():
         await setup_slash_commands()
     except Exception as e:
         print(f'Error in on_ready: {e}')
-
-@bot.command(name='price')
-async def fetch_price(ctx, *, creature_name: str):
-    prices = await fetch_prices_from_api()
-    for creature in prices:
-        if creature['name'] == creature_name.lower():
-            value = creature['shoom_price']
-            await ctx.send(f"{creature['name'].title()} - 중간값: {value}")
-            return
-    await ctx.send(f"Creature {creature_name} not found.")
 
 # 자동 완성 기능 구현
 async def autocomplete_items(interaction: discord.Interaction, current: str):
@@ -183,95 +165,6 @@ async def show_inventory(interaction: discord.Interaction):
     # 임베드 메시지를 디스코드에 전송
     await interaction.response.send_message(embeds=[embed1, embed2, embed3])
 
-# 슬래시 커맨드: 할인 적용
-@bot.tree.command(name='discount', description='Apply a discount to all creatures.')
-@app_commands.describe(discount_percentage='The discount percentage to apply (0-100)')
-async def discount_creatures(interaction: discord.Interaction, discount_percentage: int):
-    global discounted_prices  # 전역 변수로 접근
-    if 0 <= discount_percentage <= 100:
-        discount_factor = 1 - (discount_percentage / 100)
-        discounted_prices = {}
-        for creature in creatures:
-            if creature in prices:
-                original_price = float(prices[creature]["현금 시세"])
-                discounted_price = round_to_nearest(original_price * discount_factor)
-                discounted_prices[creature] = discounted_price
-
-        # 결과 메시지 구성
-        discount_message = "할인이 적용된 시세:\n"
-        for creature, price in discounted_prices.items():
-            discount_message += f"• {creature.title()} - 할인된 시세: {price}원\n"
-
-        await interaction.response.send_message(discount_message)
-    else:
-        await interaction.response.send_message("할인율은 0과 100 사이의 값이어야 합니다.")
-
-# 슬래시 커맨드: 판매 메시지 생성
-@bot.tree.command(name='sell_message', description='Generate the sell message.')
-async def sell_message(interaction: discord.Interaction):
-    """판매 메시지를 생성합니다."""
-    rate_message = "슘 1K당 0.07\n"  # 새로운 환율 정보
-    creatures_message = "ㅡㅡ소나리아ㅡㅡ\n\n계좌로 팔아요!!\n\n" + rate_message + "<크리쳐>\n"
-
-    # 크리처 목록을 순회하면서 메시지 구성
-    for item in creatures:
-        quantity = inventory.get(item, 0)  # inventory에서 최신 정보 가져오기
-        prices_info = prices.get(item, {"현금 시세": "N/A"})
-        cash_price = discounted_prices.get(item, prices_info["현금 시세"])  # 할인된 가격 사용
-        if cash_price != "N/A":
-            display_price = round_to_nearest(float(cash_price) * 0.0001)  # 수정된 반올림 함수 적용
-        else:
-            display_price = "N/A"
-        creatures_message += f"• {item.title()} {display_price} (재고 {quantity})\n"
-
-    # 아이템 목록 메시지 구성
-    items_message = "\n<아이템>\n"
-    for item in items:
-        quantity = inventory.get(item, 0)  # inventory에서 최신 정보 가져오기
-        prices_info = prices.get(item, {"현금 시세": "N/A"})
-        cash_price = prices_info["현금 시세"]
-        if cash_price != "N/A":
-            display_price = round_and_adjust(float(cash_price) * 0.0001)  # 소수점 네 번째 자리 반올림 및 조정 적용
-        else:
-            display_price = "N/A"
-        items_message += f"• {item.title()} {display_price} (재고 {quantity})\n"
-
-    # 필수 메시지 추가
-    final_message = creatures_message + items_message + "\n• 문상 X  계좌 O\n• 구매를 원하시면 갠으로! \n• 재고를 확 후 갠오세요!"
-
-    await interaction.response.send_message(final_message)
-
-# 슬래시 커맨드: 구매 메시지 생성
-@bot.tree.command(name='buy_message', description='Generate the buy message.')
-async def buy_message(interaction: discord.Interaction):
-    """구매 메시지를 생성합니다."""
-    # 필수 문장 추가
-    buy_message_content = "ㅡㅡ소나리아ㅡㅡ\n\n"  # 필수 문장
-
-    # 재고가 0~1 사이인 크리쳐 목록 추가
-    creature_lines = []
-    for item in creatures:
-        quantity = inventory.get(item, 0)
-        if quantity != "N/A" and 0 <= int(quantity) <= 1:
-            creature_lines.append(item.title())  # 재고가 0~1 사이인 크리쳐만 추가
-
-    # 두 개씩 묶어 한 줄에 추가
-    for i in range(0, len(creature_lines), 2):
-        line = ", ".join(creature_lines[i:i + 2])
-        buy_message_content += f"{line}\n"
-
-    # 필수 문장 추가
-    buy_message_content += "\n슘으로 구합니다\n정가 정도에 다 삽니다\n갠으로 제시 주세요"
-
-    # 최종 메시지 전송
-    await interaction.response.send_message(buy_message_content)
-
-# 자동 완성 기능 구현
-async def autocomplete_items(interaction: discord.Interaction, current: str):
-    all_items = creatures + items
-    # 최대 25개의 자동완성 옵션으로 제한
-    return [app_commands.Choice(name=item, value=item) for item in all_items if current.lower() in item.lower()][:25]
-
 # 슬래시 커맨드: 판매
 @bot.tree.command(name='판매', description='여러 종류의 아이템을 판매합니다.')
 @app_commands.describe(
@@ -311,6 +204,8 @@ async def record_sales(
             inventory_collection.update_one({'item': item_name}, {'$inc': {'quantity': -quantity}})
             item_details.append({"item_name": item_name, "quantity": quantity})
     
+    # 판매 기록 전송
+    sales_message = ""
     for item in item_details:
         sale_entry = {
             "nickname": nickname,
@@ -321,8 +216,9 @@ async def record_sales(
             "timestamp": interaction.created_at
         }
         sales_collection.insert_one(sale_entry)
+        sales_message += f"{item['item_name']} - {item['quantity']}개 - {sale_entry['amount']}원 - 구매자: {buyer_name}\n"
 
-    await interaction.response.send_message(f"판매 기록 완료: {nickname}님이 총 {round(amount)}원에 판매했습니다.")
+    await interaction.response.send_message(sales_message.strip())
 
 # 슬래시 커맨드: 정산
 @bot.tree.command(name='정산', description='모든 판매 내역을 정산하고, 유저별 총 금액을 표시합니다.')
@@ -358,11 +254,9 @@ async def view_sales(interaction: discord.Interaction, nickname: str = None):
     user_totals = defaultdict(float)
     
     for sale in sales_data:
-        sale_text = ""
-        for item in sale['items']:
-            sale_text += f"{item['item_name']} - {item['quantity']}개 - {sale['total_amount']}원 - 구매자: {sale['buyer_name']} "
+        sale_text = f"{sale['item_name']} - {sale['quantity']}개 - {sale['amount']}원 - 구매자: {sale['buyer_name']}"
         user_sales[sale['nickname']].append(sale_text)
-        user_totals[sale['nickname']] += sale['total_amount']
+        user_totals[sale['nickname']] += sale['amount']
 
     embeds = []
     for user, sales in user_sales.items():
