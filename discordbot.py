@@ -1,16 +1,11 @@
 import os
-import random
-import requests
-from bs4 import BeautifulSoup
-from pymongo import MongoClient
-import re
 import discord
 from discord.ext import commands
 from discord import app_commands
+from pymongo import MongoClient
 from dotenv import load_dotenv
 from decimal import Decimal, ROUND_HALF_UP
 from collections import defaultdict
-from discord.ui import TextInput  # TextInput을 discord.ui에서 가져옵니다.
 
 # 환경 변수 로드
 load_dotenv()
@@ -35,16 +30,6 @@ items = ["death gacha token", "revive token", "max growth token", "partial growt
 
 # 할인된 가격을 저장할 변수
 discounted_prices = {}
-
-# 타임 슬립과 랜덤 유니폼 적용
-def random_sleep(min_sleep=3, max_sleep=5):
-    time.sleep(random.uniform(min_sleep, max_sleep))
-
-# 유저 에이전트와 추가 헤더 설정
-headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-    'Accept-Language': 'en-US,en;q=0.9'
-}
 
 # 소수점 셋째 자리를 반올림하여 둘째 자리로 올리고, 0, 2, 또는 5로 설정하는 함수
 def round_to_nearest(value):
@@ -77,47 +62,6 @@ def round_and_adjust(value):
         adjusted_value = rounded_value + Decimal('0.01') - Decimal(third_digit) / 1000
 
     return float(adjusted_value)
-
-# 크리쳐 가격 정보를 웹 스크래핑하는 함수
-def fetch_creature_prices():
-    url = 'https://www.game.guide/creatures-of-sonaria-value-list'
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
-        soup = BeautifulSoup(response.text, 'html.parser')
-
-        creature_data = []
-
-        table = soup.find('table')
-        if not table:
-            print("Table not found in the web page.")
-            return creature_data
-
-        rows = table.find_all('tr')[1:]
-
-        for row in rows:
-            random_sleep()  # 각 요청 사이에 랜덤한 대기 시간 추가
-            cols = row.find_all('td')
-            if len(cols) >= 2:
-                name = cols[0].text.strip().lower()
-                value = cols[1].text.strip().lower()
-
-                if '~' in value:
-                    range_values = re.findall(r'\d+', value)
-                    if range_values:
-                        median_value = (int(range_values[0]) + int(range_values[1])) / 2
-                        value = f"{median_value}k"
-
-                creature_data.append({"name": name, "value": value})
-
-        return creature_data
-    else:
-        return []
-
-# MongoDB 업데이트 함수
-def update_database(creature_data):
-    for creature in creature_data:
-        db.creatures.update_one({'name': creature['name']}, {'$set': {'shoom_price': creature['value']}}, upsert=True)
-    print("Database updated with the latest creature prices.")
 
 # Discord 봇 설정
 intents = discord.Intents.default()
