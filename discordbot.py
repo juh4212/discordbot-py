@@ -358,15 +358,17 @@ async def view_sales(interaction: discord.Interaction, nickname: str = None):
     user_totals = defaultdict(float)
     
     for sale in sales_data:
-        sale_text = f"{sale['item_name']} - {sale['quantity']}개 - {sale['amount']}원 - 구매자: {sale['buyer_name']}"
+        sale_text = ""
+        for item in sale['items']:
+            sale_text += f"{item['item_name']} - {item['quantity']}개 - {sale['total_amount']}원 - 구매자: {sale['buyer_name']} "
         user_sales[sale['nickname']].append(sale_text)
-        user_totals[sale['nickname']] += sale['amount']
+        user_totals[sale['nickname']] += sale['total_amount']
 
     embeds = []
     for user, sales in user_sales.items():
         embed = discord.Embed(title=f"{user}님의 판매 기록", color=discord.Color.blue())
         for sale in sales:
-            embed.add_field(name="\u200b", value=sale, inline=False)  # \u200b는 빈 칸으로 표시되지 않음
+            embed.add_field(name="\u200b", value=sale, inline=False)
         embed.add_field(name="총 판매액", value=f"{round(user_totals[user])}원", inline=False)
         embeds.append(embed)
 
