@@ -336,7 +336,6 @@ async def record_sales(interaction: discord.Interaction, num_items: int):
         await interaction.response.send_modal(SaleModal(num_items))
     else:
         await interaction.response.send_modal(SaleModal(num_items=5))
-        # 5개 이상의 항목이 있을 경우, 추가 모달을 통해 나머지 항목들을 입력받음
         await interaction.response.send_modal(SaleModal(num_items=num_items-5, is_additional=True))
 
 class SaleModal(discord.ui.Modal):
@@ -367,6 +366,37 @@ class SaleModal(discord.ui.Modal):
         for i in range(self.num_items):
             item_name = self.children[i*2].value
             quantity = int(self.children[i*2+1].value)
+
+            # 재고 확인 및 처리
+            current_quantity = inventory.get(item_name, "N/A")
+            if current_quantity == "N/A" or current_quantity < quantity:
+                await interaction.response.send_message(f"재고가 부족합니다. 현재 {item_name}의 재고는 {current_quantity}개입니다.")
+                return
+
+            inventory[item_name] -= quantity
+            save_inventory(inventory)
+            
+            sale_entries.append({
+                "nickname": nickname,
+                "item_name": item_name,
+                "quantity": quantity,
+                "amount": total_amount / self.num_items,
+                "buyer_name": buyer_name,
+                "timestamp": interaction.created_at
+            })
+
+        for entry in sale_entries:
+            sales_collection.insert_one(entry)
+
+        await interaction.response.send_message(f"판매 기록 완료: {nickname}님이 {', '.join([entry['item_name'] for entry in sale_entries])}을(를) {buyer_name}님에게 총 {total_amount}원에 판매했습니다.")
+
+def save_inventory(inventory):
+    try:
+        for item, quantity in inventory.items():
+            inventory_collection.update_one({'item': item}, {'$set': {'quantity': quantity}}, upsert=True)
+        print("Inventory saved successfully")
+    except Exception as e:
+        print(f'Error saving inventory: {e}')
 
             # 재고 확인 및 처리
             current_quantity = inventory.get(item_name, "N/A")
