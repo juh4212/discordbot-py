@@ -21,7 +21,7 @@ client = MongoClient(MONGODB_URI, tls=True, tlsAllowInvalidCertificates=True)
 db = client.creatures_db
 inventory_collection = db['inventory']
 prices_collection = db['prices']
-sales_collection = db['sales']  # 판매 기록을 위한 컬렉션
+sales_collection = db['sales']  # 판매 기록을 위한 컬렉션 추가
 
 # 고정된 아이템 목록 (영어 순으로 정렬, 새로운 항목 추가)
 creatures = [
