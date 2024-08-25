@@ -331,17 +331,23 @@ async def record_sales(interaction: discord.Interaction, num_items: int):
         await interaction.response.send_message("판매할 아이템의 종류는 1개 이상이어야 합니다.")
         return
 
-    # 입력 받을 내용 동적으로 생성
+    # 아이템 입력을 모달로 진행
     item_details = []
     for i in range(num_items):
-        await interaction.response.send_modal(ItemEntryModal(num=i+1))
+        modal = ItemEntryModal(num=i+1, item_details=item_details)
+        await interaction.response.send_modal(modal)
+        await modal.wait()  # 사용자가 모달을 완료할 때까지 대기
 
-    await interaction.response.send_modal(FinalEntryModal(num_items=num_items, item_details=item_details))
+    # 최종 입력 모달 실행
+    final_modal = FinalEntryModal(num_items=num_items, item_details=item_details)
+    await interaction.response.send_modal(final_modal)
+    await final_modal.wait()  # 사용자가 모달을 완료할 때까지 대기
 
 # Item Entry Modal
 class ItemEntryModal(discord.ui.Modal):
-    def __init__(self, num: int):
+    def __init__(self, num: int, item_details):
         super().__init__(title=f'아이템 {num} 정보 입력')
+        self.item_details = item_details
 
         self.item_name = discord.ui.TextInput(
             label=f'아이템 {num} 이름',
@@ -416,27 +422,6 @@ class FinalEntryModal(discord.ui.Modal):
             sales_collection.insert_one(sale_entry)
 
         await interaction.response.send_message(f"판매 기록 완료: {nickname}님이 총 {total_amount}원에 판매했습니다.")
-
-
-    # Inventory 업데이트: 판매된 수량을 제거
-    current_quantity = inventory.get(item_name, "N/A")
-    if current_quantity == "N/A" or current_quantity < quantity:
-        await interaction.response.send_message(f"재고가 부족합니다. 현재 {item_name}의 재고는 {current_quantity}개입니다.")
-        return
-    
-    inventory[item_name] -= quantity
-    save_inventory(inventory)
-    
-    sale_entry = {
-        "nickname": nickname,
-        "item_name": item_name,
-        "quantity": quantity,
-        "amount": amount,
-        "buyer_name": buyer_name,
-        "timestamp": interaction.created_at
-    }
-    sales_collection.insert_one(sale_entry)
-    await interaction.response.send_message(f"판매 기록 완료: {nickname}님이 {item_name}을(를) {buyer_name}님에게 {amount}원에 판매했습니다.")
 
 # 슬래시 커맨드: 정산
 @bot.tree.command(name='정산', description='모든 판매 내역을 정산하고, 유저별 총 금액을 표시합니다.')
