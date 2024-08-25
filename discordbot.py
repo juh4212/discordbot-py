@@ -331,97 +331,61 @@ async def record_sales(interaction: discord.Interaction, num_items: int):
         await interaction.response.send_message("판매할 아이템의 종류는 1개 이상이어야 합니다.")
         return
 
-    # 아이템 입력을 모달로 진행
-    item_details = []
-    for i in range(num_items):
-        modal = ItemEntryModal(num=i+1, item_details=item_details)
-        await interaction.response.send_modal(modal)
-        await modal.wait()  # 사용자가 모달을 완료할 때까지 대기
-
-    # 최종 입력 모달 실행
-    final_modal = FinalEntryModal(num_items=num_items, item_details=item_details)
-    await interaction.response.send_modal(final_modal)
-    await final_modal.wait()  # 사용자가 모달을 완료할 때까지 대기
-
-# Item Entry Modal
-class ItemEntryModal(discord.ui.Modal):
-    def __init__(self, num: int, item_details):
-        super().__init__(title=f'아이템 {num} 정보 입력')
-        self.item_details = item_details
-
-        self.item_name = discord.ui.TextInput(
-            label=f'아이템 {num} 이름',
-            style=discord.TextStyle.short,
-            placeholder='아이템 이름을 입력하세요...',
+    # 입력 받을 내용 동적으로 생성
+    fields = []
+    for i in range(1, num_items + 1):
+        item_field = app_commands.TextInput(
+            label=f"Item {i} Name",
             required=True
         )
-        self.quantity = discord.ui.TextInput(
-            label=f'아이템 {num} 갯수',
-            style=discord.TextStyle.short,
-            placeholder='갯수를 입력하세요...',
+        quantity_field = app_commands.TextInput(
+            label=f"Item {i} Quantity",
             required=True
         )
+        fields.extend([item_field, quantity_field])
 
-        self.add_item(self.item_name)
-        self.add_item(self.quantity)
+    # 최종 입력 모달을 통해 아이템과 수량을 입력받음
+    class SalesModal(discord.ui.Modal):
+        def __init__(self):
+            super().__init__(title="판매 정보 입력")
+            self.add_item(app_commands.TextInput(label="총 판매 금액", required=True))
+            self.add_item(app_commands.TextInput(label="구매자 이름", required=True))
 
-    async def on_submit(self, interaction: discord.Interaction):
-        self.item_details.append({
-            "item_name": self.item_name.value,
-            "quantity": int(self.quantity.value)
-        })
-        await interaction.response.send_message(f'아이템 {self.item_details[-1]["item_name"]} {self.item_details[-1]["quantity"]}개 입력 완료')
+            for field in fields:
+                self.add_item(field)
 
-# Final Entry Modal
-class FinalEntryModal(discord.ui.Modal):
-    def __init__(self, num_items: int, item_details):
-        super().__init__(title='판매 정보 입력')
+        async def on_submit(self, interaction: discord.Interaction):
+            nickname = interaction.user.display_name
+            total_amount = float(self.children[-2].value)
+            buyer_name = self.children[-1].value
+            sale_entries = []
 
-        self.amount = discord.ui.TextInput(
-            label='판매 금액',
-            style=discord.TextStyle.short,
-            placeholder='판매 금액을 입력하세요...',
-            required=True
-        )
-        self.buyer_name = discord.ui.TextInput(
-            label='구매자 이름',
-            style=discord.TextStyle.short,
-            placeholder='구매자 이름을 입력하세요...',
-            required=True
-        )
-        self.num_items = num_items
-        self.item_details = item_details
+            for i in range(num_items):
+                item_name = self.children[i * 2].value
+                quantity = int(self.children[i * 2 + 1].value)
+                current_quantity = inventory.get(item_name, "N/A")
 
-        self.add_item(self.amount)
-        self.add_item(self.buyer_name)
+                if current_quantity == "N/A" or current_quantity < quantity:
+                    await interaction.response.send_message(f"재고가 부족합니다. 현재 {item_name}의 재고는 {current_quantity}개입니다.")
+                    return
 
-    async def on_submit(self, interaction: discord.Interaction):
-        nickname = interaction.user.display_name
-        total_amount = float(self.amount.value)
+                inventory[item_name] -= quantity
+                save_inventory(inventory)
 
-        for item in self.item_details:
-            item_name = item['item_name']
-            quantity = item['quantity']
-            current_quantity = inventory.get(item_name, "N/A")
+                sale_entry = {
+                    "nickname": nickname,
+                    "item_name": item_name,
+                    "quantity": quantity,
+                    "amount": total_amount / num_items,
+                    "buyer_name": buyer_name,
+                    "timestamp": interaction.created_at
+                }
+                sales_collection.insert_one(sale_entry)
+                sale_entries.append(f"{item_name} {quantity}개")
 
-            if current_quantity == "N/A" or current_quantity < quantity:
-                await interaction.response.send_message(f"재고가 부족합니다. 현재 {item_name}의 재고는 {current_quantity}개입니다.")
-                return
+            await interaction.response.send_message(f"판매 기록 완료: {nickname}님이 {', '.join(sale_entries)}를(을) {buyer_name}님에게 {total_amount}원에 판매했습니다.")
 
-            inventory[item_name] -= quantity
-            save_inventory(inventory)
-
-            sale_entry = {
-                "nickname": nickname,
-                "item_name": item_name,
-                "quantity": quantity,
-                "amount": total_amount / self.num_items,
-                "buyer_name": self.buyer_name.value,
-                "timestamp": interaction.created_at
-            }
-            sales_collection.insert_one(sale_entry)
-
-        await interaction.response.send_message(f"판매 기록 완료: {nickname}님이 총 {total_amount}원에 판매했습니다.")
+    await interaction.response.send_modal(SalesModal())
 
 # 슬래시 커맨드: 정산
 @bot.tree.command(name='정산', description='모든 판매 내역을 정산하고, 유저별 총 금액을 표시합니다.')
