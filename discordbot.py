@@ -68,6 +68,14 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
+async def fetch_prices_from_api():
+    url = 'http://localhost:5000/creature_prices'
+    response = requests.get(url)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return []
+
 @bot.event
 async def on_ready():
     global inventory, prices
@@ -78,6 +86,16 @@ async def on_ready():
         await setup_slash_commands()
     except Exception as e:
         print(f'Error in on_ready: {e}')
+
+@bot.command(name='price')
+async def fetch_price(ctx, *, creature_name: str):
+    prices = await fetch_prices_from_api()
+    for creature in prices:
+        if creature['name'] == creature_name.lower():
+            value = creature['shoom_price']
+            await ctx.send(f"{creature['name'].title()} - 중간값: {value}")
+            return
+    await ctx.send(f"Creature {creature_name} not found.")
 
 # 자동 완성 기능 구현
 async def autocomplete_items(interaction: discord.Interaction, current: str):
@@ -287,16 +305,14 @@ async def record_sales(
             inventory_collection.update_one({'item': item_name}, {'$inc': {'quantity': -quantity}})
             item_details.append({"item_name": item_name, "quantity": quantity})
     
-    for item in item_details:
-        sale_entry = {
-            "nickname": nickname,
-            "item_name": item['item_name'],
-            "quantity": item['quantity'],
-            "amount": round(amount / len(item_details)),  # 총액을 정수로 나누어 저장
-            "buyer_name": buyer_name,
-            "timestamp": interaction.created_at
-        }
-        sales_collection.insert_one(sale_entry)
+    sale_entry = {
+        "nickname": nickname,
+        "items": item_details,
+        "total_amount": round(amount),
+        "buyer_name": buyer_name,
+        "timestamp": interaction.created_at
+    }
+    sales_collection.insert_one(sale_entry)
 
     await interaction.response.send_message(f"판매 기록 완료: {nickname}님이 총 {round(amount)}원에 판매했습니다.")
 
@@ -307,7 +323,7 @@ async def finalize_sales(interaction: discord.Interaction):
     user_totals = defaultdict(float)
     
     for sale in sales_data:
-        user_totals[sale['nickname']] += sale['amount']
+        user_totals[sale['nickname']] += sale['total_amount']
     
     response_message = "정산 완료\n"
     for nickname, total in user_totals.items():
@@ -334,15 +350,17 @@ async def view_sales(interaction: discord.Interaction, nickname: str = None):
     user_totals = defaultdict(float)
     
     for sale in sales_data:
-        sale_text = f"{sale['item_name']} - {sale['quantity']}개 - {sale['amount']}원 - 구매자: {sale['buyer_name']}"
+        sale_text = ""
+        for item in sale['items']:
+            sale_text += f"{item['item_name']} - {item['quantity']}개 - {sale['total_amount']}원 - 구매자: {sale['buyer_name']} "
         user_sales[sale['nickname']].append(sale_text)
-        user_totals[sale['nickname']] += sale['amount']
+        user_totals[sale['nickname']] += sale['total_amount']
 
     embeds = []
     for user, sales in user_sales.items():
         embed = discord.Embed(title=f"{user}님의 판매 기록", color=discord.Color.blue())
         for sale in sales:
-            embed.add_field(name="판매 기록", value=sale, inline=False)
+            embed.add_field(name="\u200b", value=sale, inline=False)
         embed.add_field(name="총 판매액", value=f"{round(user_totals[user])}원", inline=False)
         embeds.append(embed)
 
