@@ -8,11 +8,9 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from dotenv import load_dotenv
-import threading
-import time
 from decimal import Decimal, ROUND_HALF_UP
 from collections import defaultdict
-from discord.ui import TextInput
+from discord.ui import TextInput  # TextInput을 discord.ui에서 가져옵니다.
 
 # 환경 변수 로드
 load_dotenv()
@@ -324,47 +322,43 @@ async def buy_message(interaction: discord.Interaction):
     # 최종 메시지 전송
     await interaction.response.send_message(buy_message_content)
 
-# 판매 커맨드 (최대 10개의 아이템 지원)
+# 판매 커맨드
 @bot.tree.command(name='판매', description='여러 종류의 아이템을 판매 기록에 추가합니다.')
-@app_commands.describe(num_items='몇 종류의 아이템을 판매하시겠습니까? (최대 10종류)')
+@app_commands.describe(num_items='몇 종류의 아이템을 판매하시겠습니까?')
 async def record_sales(interaction: discord.Interaction, num_items: int):
-    if num_items < 1 or num_items > 10:
+    if num_items < 1 or num_items > 10:  # 판매 종류는 1~10까지만 허용
         await interaction.response.send_message("판매할 아이템의 종류는 1에서 10 사이여야 합니다.")
         return
 
     item_fields = []
-    for i in range(1, num_items + 1):
-        item_fields.append(app_commands.TextInput(label=f'아이템 {i} 이름', placeholder=f'아이템 {i} 이름을 입력하세요...', required=True))
-        item_fields.append(app_commands.TextInput(label=f'아이템 {i} 갯수', placeholder=f'아이템 {i} 갯수를 입력하세요...', required=True))
-    
-    amount_field = app_commands.TextInput(label='판매 금액', placeholder='총 판매 금액을 입력하세요...', required=True)
-    buyer_field = app_commands.TextInput(label='구매자 이름', placeholder='구매자 이름을 입력하세요...', required=True)
-    
-    modal = SaleModal(num_items=num_items, item_fields=item_fields, amount_field=amount_field, buyer_field=buyer_field)
+    for i in range(num_items):
+        item_fields.append(TextInput(label=f"아이템 {i+1} 이름", placeholder=f"아이템 {i+1} 이름을 입력하세요...", required=True))
+        item_fields.append(TextInput(label=f"아이템 {i+1} 갯수", placeholder=f"아이템 {i+1} 갯수를 입력하세요...", required=True))
+
+    # 판매 금액과 구매자 이름 입력 필드 추가
+    item_fields.append(TextInput(label="판매 금액", placeholder="총 판매 금액을 입력하세요...", required=True))
+    item_fields.append(TextInput(label="구매자 이름", placeholder="구매자 이름을 입력하세요...", required=True))
+
+    # 다이나믹 모달 생성 및 응답
+    modal = SaleModal(item_fields=item_fields, num_items=num_items)
     await interaction.response.send_modal(modal)
 
 class SaleModal(discord.ui.Modal):
-    def __init__(self, num_items: int, item_fields: list, amount_field: discord.ui.TextInput, buyer_field: discord.ui.TextInput):
-        super().__init__(title='판매 정보 입력')
-        
-        for item_field in item_fields:
-            self.add_item(item_field)
-
+    def __init__(self, item_fields, num_items):
+        super().__init__(title="판매 기록 추가")
+        self.item_fields = item_fields
         self.num_items = num_items
-        self.amount_field = amount_field
-        self.buyer_field = buyer_field
-
-        self.add_item(self.amount_field)
-        self.add_item(self.buyer_field)
+        for item_field in self.item_fields:
+            self.add_item(item_field)
 
     async def on_submit(self, interaction: discord.Interaction):
         nickname = interaction.user.display_name
-        total_amount = float(self.amount_field.value)
-        buyer_name = self.buyer_field.value
+        total_amount = float(self.children[-2].value)  # 마지막 전 필드가 판매 금액
+        buyer_name = self.children[-1].value  # 마지막 필드가 구매자 이름
 
         for i in range(0, self.num_items * 2, 2):
             item_name = self.children[i].value
-            quantity = int(self.children[i+1].value)
+            quantity = int(self.children[i + 1].value)
             current_quantity = inventory.get(item_name, "N/A")
 
             if current_quantity == "N/A" or current_quantity < quantity:
@@ -485,4 +479,3 @@ def save_prices(prices):
 # 모든 기능 실행
 if __name__ == '__main__':
     bot.run(os.getenv('DISCORD_BOT_TOKEN'))
-
