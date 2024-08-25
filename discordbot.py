@@ -280,18 +280,11 @@ async def autocomplete_items(interaction: discord.Interaction, current: str):
     item_name2='판매할 아이템 이름 2 (선택사항)', quantity2='아이템 2의 갯수 (선택사항)',
     item_name3='판매할 아이템 이름 3 (선택사항)', quantity3='아이템 3의 갯수 (선택사항)',
     item_name4='판매할 아이템 이름 4 (선택사항)', quantity4='아이템 4의 갯수 (선택사항)',
-    item_name5='판매할 아이템 이름 5 (선택사항)', quantity5='아이템 5의 갯수 (선택사항)',
-    item_name6='판매할 아이템 이름 6 (선택사항)', quantity6='아이템 6의 갯수 (선택사항)',
-    item_name7='판매할 아이템 이름 7 (선택사항)', quantity7='아이템 7의 갯수 (선택사항)',
-    item_name8='판매할 아이템 이름 8 (선택사항)', quantity8='아이템 8의 갯수 (선택사항)',
-    item_name9='판매할 아이템 이름 9 (선택사항)', quantity9='아이템 9의 갯수 (선택사항)',
-    item_name10='판매할 아이템 이름 10 (선택사항)', quantity10='아이템 10의 갯수 (선택사항)',
+    item_name5='판매할 아이템 이름 5 (선택사항)', quantity5='아이템 5의 갯수 (선택사항)'
 )
 @app_commands.autocomplete(
     item_name1=autocomplete_items, item_name2=autocomplete_items, item_name3=autocomplete_items,
-    item_name4=autocomplete_items, item_name5=autocomplete_items, item_name6=autocomplete_items,
-    item_name7=autocomplete_items, item_name8=autocomplete_items, item_name9=autocomplete_items,
-    item_name10=autocomplete_items
+    item_name4=autocomplete_items, item_name5=autocomplete_items
 )
 async def record_sales(
     interaction: discord.Interaction,
@@ -302,14 +295,34 @@ async def record_sales(
     item_name3: str = None, quantity3: int = None,
     item_name4: str = None, quantity4: int = None,
     item_name5: str = None, quantity5: int = None,
-    item_name6: str = None, quantity6: int = None,
-    item_name7: str = None, quantity7: int = None,
-    item_name8: str = None, quantity8: int = None,
-    item_name9: str = None, quantity9: int = None,
-    item_name10: str = None, quantity10: int = None,
 ):
     nickname = interaction.user.display_name
     item_details = []
+    
+    # 모든 아이템과 수량을 확인하여 판매 기록에 추가
+    for i in range(1, 6):
+        item_name = eval(f'item_name{i}')
+        quantity = eval(f'quantity{i}')
+        if item_name and quantity:
+            current_quantity = inventory_collection.find_one({'item': item_name})['quantity']
+            if current_quantity < quantity:
+                await interaction.response.send_message(f"재고가 부족합니다. 현재 {item_name}의 재고는 {current_quantity}개입니다.")
+                return
+            inventory_collection.update_one({'item': item_name}, {'$inc': {'quantity': -quantity}})
+            item_details.append({"item_name": item_name, "quantity": quantity})
+    
+    for item in item_details:
+        sale_entry = {
+            "nickname": nickname,
+            "item_name": item['item_name'],
+            "quantity": item['quantity'],
+            "amount": round(amount / len(item_details)),  # 총액을 정수로 나누어 저장
+            "buyer_name": buyer_name,
+            "timestamp": interaction.created_at
+        }
+        sales_collection.insert_one(sale_entry)
+
+    await interaction.response.send_message(f"판매 기록 완료: {nickname}님이 총 {round(amount)}원에 판매했습니다.")
 
 # 슬래시 커맨드: 정산
 @bot.tree.command(name='정산', description='모든 판매 내역을 정산하고, 유저별 총 금액을 표시합니다.')
@@ -354,7 +367,7 @@ async def view_sales(interaction: discord.Interaction, nickname: str = None):
         embed = discord.Embed(title=f"{user}님의 판매 기록", color=discord.Color.blue())
         for sale in sales:
             embed.add_field(name="\u200b", value=sale, inline=False)  # \u200b는 빈 칸으로 표시되지 않음
-        embed.add_field(name="총 판매액", value=f"{user_totals[user]}원", inline=False)
+        embed.add_field(name="총 판매액", value=f"{round(user_totals[user])}원", inline=False)
         embeds.append(embed)
 
     await interaction.response.send_message(embeds=embeds)
