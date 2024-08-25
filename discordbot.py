@@ -316,7 +316,6 @@ async def finalize_sales(interaction: discord.Interaction):
     sales_collection.delete_many({})  # 정산 후 모든 판매 기록 삭제
     await interaction.response.send_message(response_message)
 
-# 슬래시 커맨드: 판매 기록 조회
 @bot.tree.command(name='판매기록', description='특정 사용자의 판매 기록을 조회합니다.')
 @app_commands.describe(nickname='조회할 디스코드 닉네임 (비워두면 모든 기록 조회)')
 async def view_sales(interaction: discord.Interaction, nickname: str = None):
@@ -334,11 +333,9 @@ async def view_sales(interaction: discord.Interaction, nickname: str = None):
     user_totals = defaultdict(float)
     
     for sale in sales_data:
-        sale_text = ""
-        for item in sale['items']:
-            sale_text += f"{item['item_name']} - {item['quantity']}개 - {sale['total_amount']}원 - 구매자: {sale['buyer_name']} "
+        sale_text = f"{sale['item_name']} - {sale['quantity']}개 - {sale['amount']}원 - 구매자: {sale['buyer_name']}"
         user_sales[sale['nickname']].append(sale_text)
-        user_totals[sale['nickname']] += sale['total_amount']
+        user_totals[sale['nickname']] += sale['amount']
 
     embeds = []
     for user, sales in user_sales.items():
@@ -349,7 +346,6 @@ async def view_sales(interaction: discord.Interaction, nickname: str = None):
         embeds.append(embed)
 
     await interaction.response.send_message(embeds=embeds)
-
 # 슬래시 명령어를 추가하기 위해 bot에 명령어를 등록
 async def setup_slash_commands():
     guild = discord.Object(id=os.getenv('GUILD_ID'))
