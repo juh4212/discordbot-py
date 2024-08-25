@@ -8,9 +8,9 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from dotenv import load_dotenv
-import threading
 import time
 from decimal import Decimal, ROUND_HALF_UP
+from collections import defaultdict
 
 # 환경 변수 로드
 load_dotenv()
@@ -21,6 +21,7 @@ client = MongoClient(MONGODB_URI, tls=True, tlsAllowInvalidCertificates=True)
 db = client.creatures_db
 inventory_collection = db['inventory']
 prices_collection = db['prices']
+sales_collection = db['sales']  # 판매 기록을 위한 컬렉션
 
 # 고정된 아이템 목록 (영어 순으로 정렬, 새로운 항목 추가)
 creatures = [
@@ -191,8 +192,8 @@ async def remove_item(interaction: discord.Interaction, item: str, quantity: int
         await interaction.response.send_message(f'Item "{item}" is not recognized.')
 
 # 슬래시 커맨드: 시세 업데이트
-@bot.tree.command(name='price', description='Update the price of an item.')
-@app_commands.describe(item='The item to update the price for', shoom_price='The new shoom price of the item')
+@bot.tree.command(name='price', description='아이템의 시세를 업데이트합니다.')
+@app_commands.describe(item='시세를 업데이트할 아이템', shoom_price='새로운 슘 시세')
 @app_commands.autocomplete(item=autocomplete_items)
 async def update_price(interaction: discord.Interaction, item: str, shoom_price: int):
     global prices  # 전역 변수로 접근하여 업데이트
@@ -205,7 +206,7 @@ async def update_price(interaction: discord.Interaction, item: str, shoom_price:
         await interaction.response.send_message(f'아이템 "{item}"은(는) 사용할 수 없는 아이템입니다.')
 
 # 슬래시 커맨드: 현재 재고 확인
-@bot.tree.command(name='inventory', description='Show the current inventory with prices.')
+@bot.tree.command(name='inventory', description='현재 재고와 시세를 확인합니다.')
 async def show_inventory(interaction: discord.Interaction):
     embed1 = discord.Embed(title="현재 재고 목록 (Creatures Part 1)", color=discord.Color.blue())
     embed2 = discord.Embed(title="현재 재고 목록 (Creatures Part 2)", color=discord.Color.blue())
@@ -239,8 +240,8 @@ async def show_inventory(interaction: discord.Interaction):
     await interaction.response.send_message(embeds=[embed1, embed2, embed3])
 
 # 슬래시 커맨드: 할인 적용
-@bot.tree.command(name='discount', description='Apply a discount to all creatures.')
-@app_commands.describe(discount_percentage='The discount percentage to apply (0-100)')
+@bot.tree.command(name='discount', description='모든 크리쳐에 할인을 적용합니다.')
+@app_commands.describe(discount_percentage='적용할 할인율 (0-100)')
 async def discount_creatures(interaction: discord.Interaction, discount_percentage: int):
     global discounted_prices  # 전역 변수로 접근
     if 0 <= discount_percentage <= 100:
@@ -261,74 +262,37 @@ async def discount_creatures(interaction: discord.Interaction, discount_percenta
     else:
         await interaction.response.send_message("할인율은 0과 100 사이의 값이어야 합니다.")
 
-# 슬래시 커맨드: 판매 메시지 생성
-@bot.tree.command(name='sell_message', description='Generate the sell message.')
-async def sell_message(interaction: discord.Interaction):
-    """판매 메시지를 생성합니다."""
-    rate_message = "슘 1K당 0.07\n"  # 새로운 환율 정보
-    creatures_message = "ㅡㅡ소나리아ㅡㅡ\n\n계좌로 팔아요!!\n\n" + rate_message + "<크리쳐>\n"
+# 슬래시 커맨드: 판매 기록
+@bot.tree.command(name='판매', description='판매 기록을 추가합니다.')
+@app_commands.describe(nickname='디스코드 닉네임', item_name='판매한 아이템 이름', amount='판매 금액', buyer_name='구매자 이름')
+async def record_sale(interaction: discord.Interaction, nickname: str, item_name: str, amount: float, buyer_name: str):
+    sale_entry = {
+        "nickname": nickname,
+        "item_name": item_name,
+        "amount": amount,
+        "buyer_name": buyer_name,
+        "timestamp": interaction.created_at
+    }
+    sales_collection.insert_one(sale_entry)
+    await interaction.response.send_message(f"판매 기록 완료: {nickname}님이 {item_name}을(를) {buyer_name}님에게 {amount}에 판매했습니다.")
 
-    # 크리처 목록을 순회하면서 메시지 구성
-    for item in creatures:
-        quantity = inventory.get(item, 0)  # inventory에서 최신 정보 가져오기
-        prices_info = prices.get(item, {"현금 시세": "N/A"})
-        cash_price = discounted_prices.get(item, prices_info["현금 시세"])  # 할인된 가격 사용
-        if cash_price != "N/A":
-            display_price = round_to_nearest(float(cash_price) * 0.0001)  # 수정된 반올림 함수 적용
-        else:
-            display_price = "N/A"
-        creatures_message += f"• {item.title()} {display_price} (재고 {quantity})\n"
+# 슬래시 커맨드: 정산
+@bot.tree.command(name='정산', description='모든 판매 내역을 정산하고, 유저별 총 금액을 표시합니다.')
+async def finalize_sales(interaction: discord.Interaction):
+    sales_data = sales_collection.find({})
+    user_totals = defaultdict(float)
+    
+    for sale in sales_data:
+        user_totals[sale['nickname']] += sale['amount']
+    
+    response_message = "정산 완료\n"
+    for nickname, total in user_totals.items():
+        response_message += f"{nickname}: {total} (총 금액)\n"
+    
+    sales_collection.delete_many({})  # 정산 후 모든 판매 기록 삭제
+    await interaction.response.send_message(response_message)
 
-    # 아이템 목록 메시지 구성
-    items_message = "\n<아이템>\n"
-    for item in items:
-        quantity = inventory.get(item, 0)  # inventory에서 최신 정보 가져오기
-        prices_info = prices.get(item, {"현금 시세": "N/A"})
-        cash_price = prices_info["현금 시세"]
-        if cash_price != "N/A":
-            display_price = round_and_adjust(float(cash_price) * 0.0001)  # 소수점 네 번째 자리 반올림 및 조정 적용
-        else:
-            display_price = "N/A"
-        items_message += f"• {item.title()} {display_price} (재고 {quantity})\n"
-
-    # 필수 메시지 추가
-    final_message = creatures_message + items_message + "\n• 문상 X  계좌 O\n• 구매를 원하시면 갠으로! \n• 재고 확인 후 갠오세요!"
-
-    await interaction.response.send_message(final_message)
-
-# 슬래시 커맨드: 구매 메시지 생성
-@bot.tree.command(name='buy_message', description='Generate the buy message.')
-async def buy_message(interaction: discord.Interaction):
-    """구매 메시지를 생성합니다."""
-    # 필수 문장 추가
-    buy_message_content = "ㅡㅡ소나리아ㅡㅡ\n\n"  # 필수 문장
-
-    # 재고가 0~1 사이인 크리쳐 목록 추가
-    creature_lines = []
-    for item in creatures:
-        quantity = inventory.get(item, 0)
-        if quantity != "N/A" and 0 <= int(quantity) <= 1:
-            creature_lines.append(item.title())  # 재고가 0~1 사이인 크리쳐만 추가
-
-    # 두 개씩 묶어 한 줄에 추가
-    for i in range(0, len(creature_lines), 2):
-        line = ", ".join(creature_lines[i:i + 2])
-        buy_message_content += f"{line}\n"
-
-    # 필수 문장 추가
-    buy_message_content += "\n슘으로 구합니다\n정가 정도에 다 삽니다\n갠으로 제시 주세요"
-
-    # 최종 메시지 전송
-    await interaction.response.send_message(buy_message_content)
-
-# 슬래시 명령어를 추가하기 위해 bot에 명령어를 등록
-async def setup_slash_commands():
-    guild = discord.Object(id=os.getenv('GUILD_ID'))
-    bot.tree.copy_global_to(guild=guild)
-    await bot.tree.sync(guild=guild)
-    print(f'Slash commands synced for guild ID: {guild.id}')
-
-# 데이터 로드 함수
+# 데이터 로드 및 저장 함수
 def load_inventory():
     try:
         inventory_data = inventory_collection.find({})
@@ -372,4 +336,3 @@ def save_prices(prices):
 # 모든 기능 실행
 if __name__ == '__main__':
     bot.run(os.getenv('DISCORD_BOT_TOKEN'))
-
