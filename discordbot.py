@@ -323,11 +323,100 @@ async def buy_message(interaction: discord.Interaction):
     # 최종 메시지 전송
     await interaction.response.send_message(buy_message_content)
 
-@bot.tree.command(name='판매', description='판매 기록을 추가합니다.')
-@app_commands.describe(item_name='판매한 아이템 이름', quantity='아이템 갯수', amount='판매 금액', buyer_name='구매자 이름')
-@app_commands.autocomplete(item_name=autocomplete_items)
-async def record_sale(interaction: discord.Interaction, item_name: str, quantity: int, amount: float, buyer_name: str):
-    nickname = interaction.user.display_name  # 명령어를 실행한 사용자의 닉네임
+# 판매 커맨드
+@bot.tree.command(name='판매', description='여러 종류의 아이템을 판매 기록에 추가합니다.')
+@app_commands.describe(num_items='몇 종류의 아이템을 판매하시겠습니까?')
+async def record_sales(interaction: discord.Interaction, num_items: int):
+    if num_items < 1:
+        await interaction.response.send_message("판매할 아이템의 종류는 1개 이상이어야 합니다.")
+        return
+
+    # 입력 받을 내용 동적으로 생성
+    item_details = []
+    for i in range(num_items):
+        await interaction.response.send_modal(ItemEntryModal(num=i+1))
+
+    await interaction.response.send_modal(FinalEntryModal(num_items=num_items, item_details=item_details))
+
+# Item Entry Modal
+class ItemEntryModal(discord.ui.Modal):
+    def __init__(self, num: int):
+        super().__init__(title=f'아이템 {num} 정보 입력')
+
+        self.item_name = discord.ui.TextInput(
+            label=f'아이템 {num} 이름',
+            style=discord.TextStyle.short,
+            placeholder='아이템 이름을 입력하세요...',
+            required=True
+        )
+        self.quantity = discord.ui.TextInput(
+            label=f'아이템 {num} 갯수',
+            style=discord.TextStyle.short,
+            placeholder='갯수를 입력하세요...',
+            required=True
+        )
+
+        self.add_item(self.item_name)
+        self.add_item(self.quantity)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        self.item_details.append({
+            "item_name": self.item_name.value,
+            "quantity": int(self.quantity.value)
+        })
+        await interaction.response.send_message(f'아이템 {self.item_details[-1]["item_name"]} {self.item_details[-1]["quantity"]}개 입력 완료')
+
+# Final Entry Modal
+class FinalEntryModal(discord.ui.Modal):
+    def __init__(self, num_items: int, item_details):
+        super().__init__(title='판매 정보 입력')
+
+        self.amount = discord.ui.TextInput(
+            label='판매 금액',
+            style=discord.TextStyle.short,
+            placeholder='판매 금액을 입력하세요...',
+            required=True
+        )
+        self.buyer_name = discord.ui.TextInput(
+            label='구매자 이름',
+            style=discord.TextStyle.short,
+            placeholder='구매자 이름을 입력하세요...',
+            required=True
+        )
+        self.num_items = num_items
+        self.item_details = item_details
+
+        self.add_item(self.amount)
+        self.add_item(self.buyer_name)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        nickname = interaction.user.display_name
+        total_amount = float(self.amount.value)
+
+        for item in self.item_details:
+            item_name = item['item_name']
+            quantity = item['quantity']
+            current_quantity = inventory.get(item_name, "N/A")
+
+            if current_quantity == "N/A" or current_quantity < quantity:
+                await interaction.response.send_message(f"재고가 부족합니다. 현재 {item_name}의 재고는 {current_quantity}개입니다.")
+                return
+
+            inventory[item_name] -= quantity
+            save_inventory(inventory)
+
+            sale_entry = {
+                "nickname": nickname,
+                "item_name": item_name,
+                "quantity": quantity,
+                "amount": total_amount / self.num_items,
+                "buyer_name": self.buyer_name.value,
+                "timestamp": interaction.created_at
+            }
+            sales_collection.insert_one(sale_entry)
+
+        await interaction.response.send_message(f"판매 기록 완료: {nickname}님이 총 {total_amount}원에 판매했습니다.")
+
 
     # Inventory 업데이트: 판매된 수량을 제거
     current_quantity = inventory.get(item_name, "N/A")
