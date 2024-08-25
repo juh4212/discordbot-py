@@ -12,6 +12,7 @@ import threading
 import time
 from decimal import Decimal, ROUND_HALF_UP
 from collections import defaultdict
+from discord.ui import TextInput
 
 # 환경 변수 로드
 load_dotenv()
