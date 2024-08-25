@@ -269,6 +269,7 @@ async def buy_message(interaction: discord.Interaction):
 # 슬래시 커맨드: 판매
 @bot.tree.command(name='판매', description='여러 종류의 아이템을 판매합니다.')
 @app_commands.describe(
+    amount='총 판매 금액', buyer_name='구매자 이름',
     num_items='몇 종류의 아이템을 판매하시겠습니까? (최대 10종류)',
     item_name1='판매할 아이템 이름 1', quantity1='아이템 1의 갯수',
     item_name2='판매할 아이템 이름 2 (선택사항)', quantity2='아이템 2의 갯수 (선택사항)',
@@ -279,8 +280,7 @@ async def buy_message(interaction: discord.Interaction):
     item_name7='판매할 아이템 이름 7 (선택사항)', quantity7='아이템 7의 갯수 (선택사항)',
     item_name8='판매할 아이템 이름 8 (선택사항)', quantity8='아이템 8의 갯수 (선택사항)',
     item_name9='판매할 아이템 이름 9 (선택사항)', quantity9='아이템 9의 갯수 (선택사항)',
-    item_name10='판매할 아이템 이름 10 (선택사항)', quantity10='아이템 10의 갯수 (선택사항)',
-    amount='총 판매 금액', buyer_name='구매자 이름'
+    item_name10='판매할 아이템 이름 10 (선택사항)', quantity10='아이템 10의 갯수 (선택사항)'
 )
 @app_commands.autocomplete(
     item_name1=autocomplete_items, item_name2=autocomplete_items, item_name3=autocomplete_items,
@@ -290,6 +290,7 @@ async def buy_message(interaction: discord.Interaction):
 )
 async def record_sales(
     interaction: discord.Interaction,
+    amount: float, buyer_name: str,
     num_items: int,
     item_name1: str, quantity1: int,
     item_name2: str = None, quantity2: int = None,
@@ -300,8 +301,7 @@ async def record_sales(
     item_name7: str = None, quantity7: int = None,
     item_name8: str = None, quantity8: int = None,
     item_name9: str = None, quantity9: int = None,
-    item_name10: str = None, quantity10: int = None,
-    amount: float, buyer_name: str
+    item_name10: str = None, quantity10: int = None
 ):
     nickname = interaction.user.display_name
     item_details = []
