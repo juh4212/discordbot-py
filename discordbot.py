@@ -1,4 +1,5 @@
 import os
+import json
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -16,7 +17,6 @@ client = MongoClient(MONGODB_URI, tls=True, tlsAllowInvalidCertificates=True)
 db = client.creatures_db
 inventory_collection = db['inventory']
 prices_collection = db['prices']
-sales_collection = db['sales']  # 판매 기록을 저장할 컬렉션
 
 # 고정된 아이템 목록 (영어 순으로 정렬, 새로운 항목 추가)
 creatures = [
@@ -67,6 +67,35 @@ def round_and_adjust(value):
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
+
+# 판매 기록을 JSON 파일에 저장하는 함수
+def save_sales_record(record):
+    sales_file = 'sales_record.json'
+    
+    # 기존 기록을 불러오기
+    if os.path.exists(sales_file):
+        with open(sales_file, 'r', encoding='utf-8') as file:
+            sales_data = json.load(file)
+    else:
+        sales_data = []
+    
+    # 새로운 기록 추가
+    sales_data.append(record)
+    
+    # 파일에 저장
+    with open(sales_file, 'w', encoding='utf-8') as file:
+        json.dump(sales_data, file, ensure_ascii=False, indent=4)
+
+# 판매 기록을 JSON 파일에서 불러오는 함수
+def load_sales_record():
+    sales_file = 'sales_record.json'
+    
+    if os.path.exists(sales_file):
+        with open(sales_file, 'r', encoding='utf-8') as file:
+            sales_data = json.load(file)
+        return sales_data
+    else:
+        return []
 
 @bot.event
 async def on_ready():
@@ -290,19 +319,20 @@ async def record_sales(
     for item in item_details:
         sale_entry = {
             "nickname": nickname,
-            "item_details": item_details,  # 아이템 리스트 추가
-            "amount": round(amount),  # 총액을 정수로 나누어 저장
+            "item_name": item['item_name'],
+            "quantity": item['quantity'],
+            "amount": round(amount / len(item_details)),  # 총액을 정수로 나누어 저장
             "buyer_name": buyer_name,
-            "timestamp": interaction.created_at
+            "timestamp": str(interaction.created_at)  # 날짜를 문자열로 변환하여 저장
         }
-        sales_collection.insert_one(sale_entry)
+        save_sales_record(sale_entry)  # 파일에 기록 저장
 
     await interaction.response.send_message(f"판매 기록 완료: {nickname}님이 총 {round(amount)}원에 판매했습니다.")
 
 # 슬래시 커맨드: 정산
 @bot.tree.command(name='정산', description='모든 판매 내역을 정산하고, 유저별 총 금액을 표시합니다.')
 async def finalize_sales(interaction: discord.Interaction):
-    sales_data = sales_collection.find({})
+    sales_data = load_sales_record()
     user_totals = defaultdict(float)
     
     for sale in sales_data:
@@ -312,17 +342,18 @@ async def finalize_sales(interaction: discord.Interaction):
     for nickname, total in user_totals.items():
         response_message += f"{nickname}: {total}원 (총 금액)\n"
     
-    sales_collection.delete_many({})  # 정산 후 모든 판매 기록 삭제
+    with open('sales_record.json', 'w', encoding='utf-8') as file:
+        json.dump([], file)  # 정산 후 모든 판매 기록 초기화
+    
     await interaction.response.send_message(response_message)
 
 # 슬래시 커맨드: 판매 기록 조회
 @bot.tree.command(name='판매기록', description='특정 사용자의 판매 기록을 조회합니다.')
 @app_commands.describe(nickname='조회할 디스코드 닉네임 (비워두면 모든 기록 조회)')
 async def view_sales(interaction: discord.Interaction, nickname: str = None):
+    sales_data = load_sales_record()
     if nickname:
-        sales_data = list(sales_collection.find({"nickname": nickname}))
-    else:
-        sales_data = list(sales_collection.find({}))
+        sales_data = [sale for sale in sales_data if sale['nickname'] == nickname]
     
     if len(sales_data) == 0:
         await interaction.response.send_message("판매 기록이 없습니다.")
@@ -333,9 +364,7 @@ async def view_sales(interaction: discord.Interaction, nickname: str = None):
     user_totals = defaultdict(float)
     
     for sale in sales_data:
-        sale_text = ""
-        for item in sale.get('items', []):  # items 키가 없으면 빈 리스트로 처리
-            sale_text += f"{item['item_name']} - {item['quantity']}개 - {item['amount']}원 - 구매자: {sale['buyer_name']}\n"
+        sale_text = f"{sale['item_name']} - {sale['quantity']}개 - {sale['amount']}원 - 구매자: {sale['buyer_name']}"
         user_sales[sale['nickname']].append(sale_text)
         user_totals[sale['nickname']] += sale['amount']
 
