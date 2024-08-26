@@ -347,30 +347,28 @@ async def sell_item(interaction: discord.Interaction, amount: int, buyer_name: s
         current_quantity = inventory.get(item, 0)
         if current_quantity >= quantity:
             inventory[item] -= quantity
-            save_inventory(inventory)
+            # 각 판매 내역을 개별적으로 MongoDB에 저장
+            sale_record = {
+                "amount": amount,
+                "buyer_name": buyer_name,
+                "items_sold": [(item, quantity)],
+                "timestamp": time.time(),
+                "user_id": interaction.user.id,  # 사용자 ID 저장
+                "user_display_name": interaction.user.display_name  # 사용자 이름 저장
+            }
+            sales_collection.insert_one(sale_record)
         else:
             await safe_send(interaction, f"재고가 부족하여 {item}을(를) {quantity}개 판매할 수 없습니다.")
             return
 
-    # 각 판매 내역을 개별적으로 MongoDB에 저장
-    for item, quantity in items_sold:
-        sale_record = {
-            "amount": amount,
-            "buyer_name": buyer_name,
-            "items_sold": [(item, quantity)],
-            "timestamp": time.time(),
-            "user_id": interaction.user.id,  # 사용자 ID 저장
-            "user_display_name": interaction.user.display_name  # 사용자 이름 저장
-        }
-        result = sales_collection.insert_one(sale_record)
-
+    save_inventory(inventory)
     await safe_send(interaction, f"상품이 판매되었습니다! 총액: {amount}원")
 
 # 슬래시 커맨드: 모든 유저의 판매 내역 확인
 @bot.tree.command(name='판매내역', description='모든 유저의 판매 내역을 확인합니다.')
 async def show_sales(interaction: discord.Interaction):
-    all_sales_records = sales_collection.find().sort("timestamp", 1)
-    if all_sales_records.count() == 0:  # 판매 내역이 없을 경우
+    all_sales_records = list(sales_collection.find().sort("timestamp", 1))
+    if len(all_sales_records) == 0:  # 판매 내역이 없을 경우
         await safe_send(interaction, "판매 기록이 없습니다.")
         return
 
