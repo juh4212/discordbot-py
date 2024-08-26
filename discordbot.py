@@ -1,3 +1,5 @@
+
+나의 말:
 import os
 import discord
 from discord.ext import commands
@@ -231,7 +233,33 @@ async def record_sales(
     item_name5: str = None, quantity5: int = None,
 ):
     nickname = interaction.user.display_name
-    item_details = []
+    items_sold = []
+
+    # 모든 아이템과 수량을 확인하여 판매 기록에 추가
+    for i in range(1, 6):
+        item_name = eval(f'item_name{i}')
+        quantity = eval(f'quantity{i}')
+        if item_name and quantity:
+            current_quantity = inventory_collection.find_one({'item': item_name})['quantity']
+            if current_quantity < quantity:
+                await interaction.response.send_message(f"재고가 부족합니다. 현재 {item_name}의 재고는 {current_quantity}개입니다.")
+                return
+            inventory_collection.update_one({'item': item_name}, {'$inc': {'quantity': -quantity}})
+            items_sold.append({"item_name": item_name, "quantity": quantity})
+    
+    if items_sold:
+        sale_entry = {
+            "nickname": nickname,
+            "items_sold": items_sold,
+            "total_amount": round(amount),
+            "buyer_name": buyer_name,
+            "timestamp": interaction.created_at
+        }
+        sales_collection.insert_one(sale_entry)
+
+        await interaction.response.send_message(f"판매 기록 완료: {nickname}님이 총 {round(amount)}원에 판매했습니다.")
+    else:
+        await interaction.response.send_message("판매할 아이템을 선택하지 않았습니다.")
     
     # 모든 아이템과 수량을 확인하여 판매 기록에 추가
     for i in range(1, 6):
@@ -278,30 +306,23 @@ async def finalize_sales(interaction: discord.Interaction):
 @bot.tree.command(name='판매기록', description='특정 사용자의 판매 기록을 조회합니다.')
 @app_commands.describe(nickname='조회할 디스코드 닉네임 (비워두면 모든 기록 조회)')
 async def view_sales(interaction: discord.Interaction, nickname: str = None):
-    if nickname:
-        sales_data = list(sales_collection.find({"nickname": nickname}))
-    else:
-        sales_data = list(sales_collection.find({}))
+    query = {"nickname": nickname} if nickname else {}
+    sales_data = list(sales_collection.find(query))
     
-    if len(sales_data) == 0:
+    if not sales_data:
         await interaction.response.send_message("판매 기록이 없습니다.")
         return
 
     # 사용자의 판매 기록을 분류하여 출력
-    user_sales = defaultdict(list)
-    user_totals = defaultdict(float)
-    
-    for sale in sales_data:
-        sale_text = f"{sale['item_name']} - {sale['quantity']}개 - {sale['amount']}원 - 구매자: {sale['buyer_name']}"
-        user_sales[sale['nickname']].append(sale_text)
-        user_totals[sale['nickname']] += sale['amount']
-
     embeds = []
-    for user, sales in user_sales.items():
-        embed = discord.Embed(title=f"{user}님의 판매 기록", color=discord.Color.blue())
-        for sale in sales:
-            embed.add_field(name="\u200b", value=sale, inline=False)
-        embed.add_field(name="총 판매액", value=f"{round(user_totals[user])}원", inline=False)
+    for sale in sales_data:
+        embed = discord.Embed(title=f"{sale['nickname']}님의 판매 기록", color=discord.Color.blue())
+        embed.add_field(name="총 판매액", value=f"{round(sale['total_amount'])}원", inline=False)
+        embed.add_field(name="구매자", value=sale['buyer_name'], inline=False)
+        embed.add_field(name="판매 날짜", value=sale['timestamp'].strftime("%Y-%m-%d %H:%M:%S"), inline=False)
+
+        items_text = "\n".join([f"{item['item_name']} - {item['quantity']}개" for item in sale['items_sold']])
+        embed.add_field(name="판매된 아이템", value=items_text, inline=False)
         embeds.append(embed)
 
     await interaction.response.send_message(embeds=embeds)
