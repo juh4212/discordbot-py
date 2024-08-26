@@ -358,27 +358,36 @@ async def sell_item(interaction: discord.Interaction, amount: int, buyer_name: s
         "buyer_name": buyer_name,
         "items_sold": items_sold,
         "timestamp": time.time(),
-        "user_id": interaction.user.id  # 사용자 ID 저장
+        "user_id": interaction.user.id,  # 사용자 ID 저장
+        "user_display_name": interaction.user.display_name  # 사용자 이름 저장
     }
     result = sales_collection.insert_one(sale_record)
 
     await safe_send(interaction, f"상품이 판매되었습니다! 판매 ID: {result.inserted_id}, 구매자: {buyer_name}, 총액: {amount}원")
 
-# 슬래시 커맨드: 판매 내역 확인
-@bot.tree.command(name='판매내역', description='판매 내역을 확인합니다.')
+# 슬래시 커맨드: 모든 유저의 판매 내역 확인
+@bot.tree.command(name='판매내역', description='모든 유저의 판매 내역을 확인합니다.')
 async def show_sales(interaction: discord.Interaction):
-    sales_records = sales_collection.find({"user_id": interaction.user.id}).sort("timestamp", 1)
-    total_sales = 0
-    sales_message = f"{interaction.user.display_name}님의 판매 기록:\n\n"
-
-    for record in sales_records:
+    all_sales_records = sales_collection.find().sort("timestamp", 1)
+    user_sales = {}
+    for record in all_sales_records:
+        user_id = record.get("user_id")
+        user_display_name = record.get("user_display_name", "알 수 없음")
+        if user_display_name not in user_sales:
+            user_sales[user_display_name] = []
+        
         items_detail = ", ".join([f"{item} - {quantity}개" for item, quantity in record.get("items_sold", [])])
-        sales_message += f"{items_detail} - {record.get('amount', '알 수 없음')}원 - 구매자: {record.get('buyer_name', '알 수 없음')} (판매 ID: {record['_id']})\n"
-        total_sales += record.get("amount", 0)
+        sales_info = f"{items_detail} - {record.get('amount', '알 수 없음')}원 - 구매자: {record.get('buyer_name', '알 수 없음')} (판매 ID: {record['_id']})"
+        user_sales[user_display_name].append(sales_info)
+    
+    final_message = ""
+    for user, sales in user_sales.items():
+        total_sales = sum(int(re.search(r"(\d+)원", sale).group(1)) for sale in sales if re.search(r"(\d+)원", sale))
+        final_message += f"{user}님의 판매 기록:\n\n"
+        final_message += "\n".join(sales)
+        final_message += f"\n\n총 판매액: {total_sales}원\n\n"
 
-    sales_message += f"\n총 판매액: {total_sales}원"
-
-    await safe_send(interaction, sales_message)
+    await safe_send(interaction, final_message)
 
 # 슬래시 커맨드: 특정 판매 기록 삭제 및 인벤토리 복구 (어드민 전용)
 @bot.tree.command(name='판매삭제', description='특정 판매 기록을 삭제하고, 인벤토리를 복구합니다.')
