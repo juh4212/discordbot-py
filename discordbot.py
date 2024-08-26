@@ -10,6 +10,7 @@ from discord import app_commands
 import threading
 import time
 from decimal import Decimal, ROUND_HALF_UP
+from bson.objectid import ObjectId
 
 # MongoDB 연결 설정
 MONGODB_URI = os.getenv('MONGODB_URI')
@@ -345,15 +346,16 @@ async def sell_item(interaction: discord.Interaction, amount: int, buyer_name: s
             await interaction.response.send_message(f"재고가 부족하여 {item}을(를) {quantity}개 판매할 수 없습니다.")
             return
 
-    # 판매 내역을 MongoDB에 저장
-    sales_collection.insert_one({
+    # 판매 내역을 MongoDB에 저장하고 ID를 반환
+    sale_record = {
         "amount": amount,
         "buyer_name": buyer_name,
         "items_sold": items_sold,
         "timestamp": time.time()
-    })
+    }
+    result = sales_collection.insert_one(sale_record)
 
-    await interaction.response.send_message(f"상품이 판매되었습니다! 구매자: {buyer_name}, 총액: {amount}원")
+    await interaction.response.send_message(f"상품이 판매되었습니다! 판매 ID: {result.inserted_id}, 구매자: {buyer_name}, 총액: {amount}원")
 
 # 슬래시 커맨드: 판매 내역 확인
 @bot.tree.command(name='판매내역', description='판매 내역을 확인합니다.')
@@ -364,12 +366,25 @@ async def show_sales(interaction: discord.Interaction):
 
     for record in sales_records:
         items_detail = ", ".join([f"{item} - {quantity}개" for item, quantity in record.get("items_sold", [])])
-        sales_message += f"{items_detail} - {record.get('amount', '알 수 없음')}원 - 구매자: {record.get('buyer_name', '알 수 없음')}\n"
+        sales_message += f"{items_detail} - {record.get('amount', '알 수 없음')}원 - 구매자: {record.get('buyer_name', '알 수 없음')} (판매 ID: {record['_id']})\n"
         total_sales += record.get("amount", 0)
 
     sales_message += f"\n총 판매액: {total_sales}원"
 
     await interaction.response.send_message(sales_message)
+
+# 슬래시 커맨드: 특정 판매 기록 삭제
+@bot.tree.command(name='판매삭제', description='특정 판매 기록을 삭제합니다.')
+@app_commands.describe(sale_id='삭제할 판매 기록의 ID')
+async def delete_sale(interaction: discord.Interaction, sale_id: str):
+    try:
+        result = sales_collection.delete_one({"_id": ObjectId(sale_id)})
+        if result.deleted_count == 1:
+            await interaction.response.send_message(f"판매 기록(ID: {sale_id})이 성공적으로 삭제되었습니다.")
+        else:
+            await interaction.response.send_message(f"판매 기록(ID: {sale_id})을 찾을 수 없습니다.")
+    except Exception as e:
+        await interaction.response.send_message(f"오류가 발생했습니다: {str(e)}")
 
 # 슬래시 커맨드: 판매 내역 초기화 (정산)
 @bot.tree.command(name='정산', description='판매 내역을 초기화합니다.')
