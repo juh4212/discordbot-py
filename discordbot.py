@@ -352,18 +352,19 @@ async def sell_item(interaction: discord.Interaction, amount: int, buyer_name: s
             await safe_send(interaction, f"재고가 부족하여 {item}을(를) {quantity}개 판매할 수 없습니다.")
             return
 
-    # 판매 내역을 MongoDB에 저장하고 ID를 반환
-    sale_record = {
-        "amount": amount,
-        "buyer_name": buyer_name,
-        "items_sold": items_sold,
-        "timestamp": time.time(),
-        "user_id": interaction.user.id,  # 사용자 ID 저장
-        "user_display_name": interaction.user.display_name  # 사용자 이름 저장
-    }
-    result = sales_collection.insert_one(sale_record)
+    # 각 판매 내역을 개별적으로 MongoDB에 저장
+    for item, quantity in items_sold:
+        sale_record = {
+            "amount": amount,
+            "buyer_name": buyer_name,
+            "items_sold": [(item, quantity)],
+            "timestamp": time.time(),
+            "user_id": interaction.user.id,  # 사용자 ID 저장
+            "user_display_name": interaction.user.display_name  # 사용자 이름 저장
+        }
+        result = sales_collection.insert_one(sale_record)
 
-    await safe_send(interaction, f"상품이 판매되었습니다! 판매 ID: {result.inserted_id}, 구매자: {buyer_name}, 총액: {amount}원")
+    await safe_send(interaction, f"상품이 판매되었습니다! 총액: {amount}원")
 
 # 슬래시 커맨드: 모든 유저의 판매 내역 확인
 @bot.tree.command(name='판매내역', description='모든 유저의 판매 내역을 확인합니다.')
@@ -420,7 +421,7 @@ async def delete_sale(interaction: discord.Interaction, sale_id: str):
 async def reset_sales(interaction: discord.Interaction):
     # 관리자 권한 확인 (예: 'ADMINISTRATOR' 권한이 있는 경우)
     if interaction.user.guild_permissions.administrator:
-        sales_collection.delete_many({"user_id": interaction.user.id})
+        sales_collection.delete_many({})  # 모든 판매 기록 삭제
         await safe_send(interaction, "판매 내역이 초기화되었습니다.")
     else:
         await safe_send(interaction, "이 명령어를 사용할 권한이 없습니다.", ephemeral=True)
