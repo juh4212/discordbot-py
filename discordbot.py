@@ -321,7 +321,7 @@ async def buy_message(interaction: discord.Interaction):
 # 슬래시 커맨드: 판매 기록 저장 및 인벤토리 업데이트
 @bot.tree.command(name='판매', description='상품을 판매합니다.')
 @app_commands.describe(amount='판매 총액', buyer_name='구매자 이름', item_name1='첫 번째 아이템', quantity1='첫 번째 아이템 수량')
-@app_commands.autocomplete(item_name1=autocomplete_items)
+@app_commands.autocomplete(item_name1=autocomplete_items, item_name2=autocomplete_items, item_name3=autocomplete_items, item_name4=autocomplete_items, item_name5=autocomplete_items)
 async def sell_item(interaction: discord.Interaction, amount: int, buyer_name: str, item_name1: str, quantity1: int, item_name2: str = None, quantity2: int = 0, item_name3: str = None, quantity3: int = 0, item_name4: str = None, quantity4: int = 0, item_name5: str = None, quantity5: int = 0):
     items_sold = [(item_name1, quantity1)]
     
@@ -363,9 +363,9 @@ async def show_sales(interaction: discord.Interaction):
     sales_message = "버섯농장주인님의 판매 기록:\n\n"
 
     for record in sales_records:
-        items_detail = ", ".join([f"{item} - {quantity}개" for item, quantity in record["items_sold"]])
-        sales_message += f"{items_detail} - {record['amount']}원 - 구매자: {record['buyer_name']}\n"
-        total_sales += record["amount"]
+        items_detail = ", ".join([f"{item} - {quantity}개" for item, quantity in record.get("items_sold", [])])
+        sales_message += f"{items_detail} - {record.get('amount', '알 수 없음')}원 - 구매자: {record.get('buyer_name', '알 수 없음')}\n"
+        total_sales += record.get("amount", 0)
 
     sales_message += f"\n총 판매액: {total_sales}원"
 
