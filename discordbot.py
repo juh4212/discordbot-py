@@ -370,6 +370,10 @@ async def sell_item(interaction: discord.Interaction, amount: int, buyer_name: s
 @bot.tree.command(name='판매내역', description='모든 유저의 판매 내역을 확인합니다.')
 async def show_sales(interaction: discord.Interaction):
     all_sales_records = sales_collection.find().sort("timestamp", 1)
+    if all_sales_records.count() == 0:  # 판매 내역이 없을 경우
+        await safe_send(interaction, "판매 기록이 없습니다.")
+        return
+
     user_sales = {}
     for record in all_sales_records:
         user_id = record.get("user_id")
