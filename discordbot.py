@@ -371,6 +371,16 @@ async def show_sales(interaction: discord.Interaction):
 
     await interaction.response.send_message(sales_message)
 
+# 슬래시 커맨드: 판매 내역 초기화 (정산)
+@bot.tree.command(name='정산', description='판매 내역을 초기화합니다.')
+async def reset_sales(interaction: discord.Interaction):
+    # 관리자 권한 확인 (예: 'ADMINISTRATOR' 권한이 있는 경우)
+    if interaction.user.guild_permissions.administrator:
+        sales_collection.delete_many({})
+        await interaction.response.send_message("판매 내역이 초기화되었습니다.")
+    else:
+        await interaction.response.send_message("이 명령어를 사용할 권한이 없습니다.", ephemeral=True)
+
 # 슬래시 명령어를 추가하기 위해 bot에 명령어를 등록
 async def setup_slash_commands():
     guild = discord.Object(id=os.getenv('GUILD_ID'))
