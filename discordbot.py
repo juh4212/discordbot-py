@@ -120,6 +120,8 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 # 안전한 응답 함수: 상호작용이 이미 응답되었는지 확인
 async def safe_send(interaction, content=None, embeds=None):
     try:
+        if embeds is None:
+            embeds = []
         if not interaction.response.is_done():
             await interaction.response.send_message(content, embeds=embeds)
         else:
