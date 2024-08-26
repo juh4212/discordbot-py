@@ -1,5 +1,3 @@
-
-나의 말:
 import os
 import discord
 from discord.ext import commands
