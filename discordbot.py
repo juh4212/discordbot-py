@@ -347,7 +347,8 @@ async def sell_item(interaction: discord.Interaction, amount: int, buyer_name: s
         "amount": amount,
         "buyer_name": buyer_name,
         "items_sold": items_sold,
-        "timestamp": time.time()
+        "timestamp": time.time(),
+        "user_id": interaction.user.id  # 사용자 ID 저장
     }
     result = sales_collection.insert_one(sale_record)
 
@@ -358,9 +359,9 @@ async def sell_item(interaction: discord.Interaction, amount: int, buyer_name: s
 async def show_sales(interaction: discord.Interaction):
     # 어드민 권한 확인
     if interaction.user.guild_permissions.administrator:
-        sales_records = sales_collection.find().sort("timestamp", 1)
+        sales_records = sales_collection.find({"user_id": interaction.user.id}).sort("timestamp", 1)
         total_sales = 0
-        sales_message = "버섯농장주인님의 판매 기록:\n\n"
+        sales_message = f"{interaction.user.display_name}님의 판매 기록:\n\n"
 
         for record in sales_records:
             items_detail = ", ".join([f"{item} - {quantity}개" for item, quantity in record.get("items_sold", [])])
@@ -379,7 +380,7 @@ async def show_sales(interaction: discord.Interaction):
 async def delete_sale(interaction: discord.Interaction, sale_id: str):
     try:
         # 판매 기록을 조회하여 인벤토리 복구에 필요한 정보 획득
-        sale_record = sales_collection.find_one({"_id": ObjectId(sale_id)})
+        sale_record = sales_collection.find_one({"_id": ObjectId(sale_id), "user_id": interaction.user.id})
         if sale_record:
             # 인벤토리 복구
             items_sold = sale_record.get("items_sold", [])
@@ -392,7 +393,7 @@ async def delete_sale(interaction: discord.Interaction, sale_id: str):
             sales_collection.delete_one({"_id": ObjectId(sale_id)})
             await interaction.response.send_message(f"판매 기록(ID: {sale_id})이 성공적으로 삭제되고, 인벤토리가 복구되었습니다.")
         else:
-            await interaction.response.send_message(f"판매 기록(ID: {sale_id})을 찾을 수 없습니다.")
+            await interaction.response.send_message(f"판매 기록(ID: {sale_id})을 찾을 수 없거나, 이 기록을 삭제할 권한이 없습니다.")
     except Exception as e:
         await interaction.response.send_message(f"오류가 발생했습니다: {str(e)}")
 
@@ -401,7 +402,7 @@ async def delete_sale(interaction: discord.Interaction, sale_id: str):
 async def reset_sales(interaction: discord.Interaction):
     # 관리자 권한 확인 (예: 'ADMINISTRATOR' 권한이 있는 경우)
     if interaction.user.guild_permissions.administrator:
-        sales_collection.delete_many({})
+        sales_collection.delete_many({"user_id": interaction.user.id})
         await interaction.response.send_message("판매 내역이 초기화되었습니다.")
     else:
         await interaction.response.send_message("이 명령어를 사용할 권한이 없습니다.", ephemeral=True)
