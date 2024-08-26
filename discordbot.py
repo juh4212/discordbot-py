@@ -118,12 +118,12 @@ intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 # 안전한 응답 함수: 상호작용이 이미 응답되었는지 확인
-async def safe_send(interaction, content):
+async def safe_send(interaction, content=None, embeds=None):
     try:
         if not interaction.response.is_done():
-            await interaction.response.send_message(content)
+            await interaction.response.send_message(content, embeds=embeds)
         else:
-            await interaction.followup.send(content)
+            await interaction.followup.send(content, embeds=embeds)
     except discord.errors.NotFound:
         print("Interaction not found or already responded to.")
 
