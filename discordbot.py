@@ -345,17 +345,15 @@ async def sell_item(interaction: discord.Interaction, amount: int, buyer_name: s
     if item_name5 and quantity5 > 0:
         items_sold.append((item_name5, quantity5))
 
-    if not items_sold:
-        await safe_send(interaction, "적어도 하나의 아이템과 수량을 입력해야 합니다.")
-        return
-
     # 재고 업데이트 및 판매 내역 기록
-    for item, quantity in items_sold:
-        current_quantity = inventory.get(item, 0)
-        if current_quantity < quantity:
-            await safe_send(interaction, f"재고가 부족하여 {item}을(를) {quantity}개 판매할 수 없습니다.")
-            return
-        inventory[item] -= quantity
+    if items_sold:
+        for item, quantity in items_sold:
+            current_quantity = inventory.get(item, 0)
+            if current_quantity < quantity:
+                await safe_send(interaction, f"재고가 부족하여 {item}을(를) {quantity}개 판매할 수 없습니다.")
+                return
+            inventory[item] -= quantity
+        save_inventory(inventory)
 
     # 판매 내역을 통합하여 저장
     sale_record = {
@@ -368,7 +366,6 @@ async def sell_item(interaction: discord.Interaction, amount: int, buyer_name: s
     }
     sales_collection.insert_one(sale_record)
 
-    save_inventory(inventory)
     await safe_send(interaction, f"상품이 판매되었습니다! 총액: {amount}원")
 
 # 슬래시 커맨드: 모든 유저의 판매 내역 확인
