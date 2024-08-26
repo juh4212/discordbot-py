@@ -48,15 +48,11 @@ def round_to_nearest(value):
     rounded_value = Decimal(value).quantize(Decimal('0.00'))
     second_digit = int(rounded_value * 100) % 10
     
-    if second_digit <= 2:
+    if (second_digit <= 2) or (second_digit > 7):
         rounded_value = rounded_value - Decimal(second_digit) / 100
-    elif second_digit <= 4:
+    elif (second_digit <= 4) or (second_digit <= 7):
         rounded_value = rounded_value - Decimal(second_digit) / 100 + Decimal('0.05')
-    elif second_digit <= 7:
-        rounded_value = rounded_value - Decimal(second_digit) / 100 + Decimal('0.05')
-    else:
-        rounded_value = rounded_value + Decimal('0.1') - Decimal(second_digit) / 100
-    
+
     return float(rounded_value)
 
 # 소수점 네 번째 자리를 반올림하고 세 번째 자리를 0, 2, 5로 조정하는 함수
@@ -373,14 +369,24 @@ async def show_sales(interaction: discord.Interaction):
 
     await interaction.response.send_message(sales_message)
 
-# 슬래시 커맨드: 특정 판매 기록 삭제
-@bot.tree.command(name='판매삭제', description='특정 판매 기록을 삭제합니다.')
+# 슬래시 커맨드: 특정 판매 기록 삭제 및 인벤토리 복구
+@bot.tree.command(name='판매삭제', description='특정 판매 기록을 삭제하고, 인벤토리를 복구합니다.')
 @app_commands.describe(sale_id='삭제할 판매 기록의 ID')
 async def delete_sale(interaction: discord.Interaction, sale_id: str):
     try:
-        result = sales_collection.delete_one({"_id": ObjectId(sale_id)})
-        if result.deleted_count == 1:
-            await interaction.response.send_message(f"판매 기록(ID: {sale_id})이 성공적으로 삭제되었습니다.")
+        # 판매 기록을 조회하여 인벤토리 복구에 필요한 정보 획득
+        sale_record = sales_collection.find_one({"_id": ObjectId(sale_id)})
+        if sale_record:
+            # 인벤토리 복구
+            items_sold = sale_record.get("items_sold", [])
+            for item, quantity in items_sold:
+                current_quantity = inventory.get(item, 0)
+                inventory[item] = current_quantity + quantity
+            save_inventory(inventory)
+
+            # 판매 기록 삭제
+            sales_collection.delete_one({"_id": ObjectId(sale_id)})
+            await interaction.response.send_message(f"판매 기록(ID: {sale_id})이 성공적으로 삭제되고, 인벤토리가 복구되었습니다.")
         else:
             await interaction.response.send_message(f"판매 기록(ID: {sale_id})을 찾을 수 없습니다.")
     except Exception as e:
