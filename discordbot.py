@@ -345,21 +345,21 @@ async def sell_item(interaction: discord.Interaction, amount: int, buyer_name: s
     # 재고 업데이트 및 판매 내역 기록
     for item, quantity in items_sold:
         current_quantity = inventory.get(item, 0)
-        if current_quantity >= quantity:
-            inventory[item] -= quantity
-            # 각 판매 내역을 개별적으로 MongoDB에 저장
-            sale_record = {
-                "amount": amount,
-                "buyer_name": buyer_name,
-                "items_sold": [(item, quantity)],
-                "timestamp": time.time(),
-                "user_id": interaction.user.id,  # 사용자 ID 저장
-                "user_display_name": interaction.user.display_name  # 사용자 이름 저장
-            }
-            sales_collection.insert_one(sale_record)
-        else:
+        if current_quantity < quantity:
             await safe_send(interaction, f"재고가 부족하여 {item}을(를) {quantity}개 판매할 수 없습니다.")
             return
+        inventory[item] -= quantity
+
+    # 판매 내역을 통합하여 저장
+    sale_record = {
+        "amount": amount,
+        "buyer_name": buyer_name,
+        "items_sold": items_sold,
+        "timestamp": time.time(),
+        "user_id": interaction.user.id,  # 사용자 ID 저장
+        "user_display_name": interaction.user.display_name  # 사용자 이름 저장
+    }
+    sales_collection.insert_one(sale_record)
 
     save_inventory(inventory)
     await safe_send(interaction, f"상품이 판매되었습니다! 총액: {amount}원")
