@@ -354,50 +354,49 @@ async def sell_item(interaction: discord.Interaction, amount: int, buyer_name: s
 
     await interaction.response.send_message(f"상품이 판매되었습니다! 판매 ID: {result.inserted_id}, 구매자: {buyer_name}, 총액: {amount}원")
 
-# 슬래시 커맨드: 판매 내역 확인 (어드민 전용)
+# 슬래시 커맨드: 판매 내역 확인
 @bot.tree.command(name='판매내역', description='판매 내역을 확인합니다.')
 async def show_sales(interaction: discord.Interaction):
-    # 어드민 권한 확인
-    if interaction.user.guild_permissions.administrator:
-        sales_records = sales_collection.find({"user_id": interaction.user.id}).sort("timestamp", 1)
-        total_sales = 0
-        sales_message = f"{interaction.user.display_name}님의 판매 기록:\n\n"
+    sales_records = sales_collection.find({"user_id": interaction.user.id}).sort("timestamp", 1)
+    total_sales = 0
+    sales_message = f"{interaction.user.display_name}님의 판매 기록:\n\n"
 
-        for record in sales_records:
-            items_detail = ", ".join([f"{item} - {quantity}개" for item, quantity in record.get("items_sold", [])])
-            sales_message += f"{items_detail} - {record.get('amount', '알 수 없음')}원 - 구매자: {record.get('buyer_name', '알 수 없음')} (판매 ID: {record['_id']})\n"
-            total_sales += record.get("amount", 0)
+    for record in sales_records:
+        items_detail = ", ".join([f"{item} - {quantity}개" for item, quantity in record.get("items_sold", [])])
+        sales_message += f"{items_detail} - {record.get('amount', '알 수 없음')}원 - 구매자: {record.get('buyer_name', '알 수 없음')} (판매 ID: {record['_id']})\n"
+        total_sales += record.get("amount", 0)
 
-        sales_message += f"\n총 판매액: {total_sales}원"
+    sales_message += f"\n총 판매액: {total_sales}원"
 
-        await interaction.response.send_message(sales_message)
-    else:
-        await interaction.response.send_message("이 명령어를 사용할 권한이 없습니다.", ephemeral=True)
+    await interaction.response.send_message(sales_message)
 
-# 슬래시 커맨드: 특정 판매 기록 삭제 및 인벤토리 복구
+# 슬래시 커맨드: 특정 판매 기록 삭제 및 인벤토리 복구 (어드민 전용)
 @bot.tree.command(name='판매삭제', description='특정 판매 기록을 삭제하고, 인벤토리를 복구합니다.')
 @app_commands.describe(sale_id='삭제할 판매 기록의 ID')
 async def delete_sale(interaction: discord.Interaction, sale_id: str):
-    try:
-        # 판매 기록을 조회하여 인벤토리 복구에 필요한 정보 획득
-        sale_record = sales_collection.find_one({"_id": ObjectId(sale_id), "user_id": interaction.user.id})
-        if sale_record:
-            # 인벤토리 복구
-            items_sold = sale_record.get("items_sold", [])
-            for item, quantity in items_sold:
-                current_quantity = inventory.get(item, 0)
-                inventory[item] = current_quantity + quantity
-            save_inventory(inventory)
+    if interaction.user.guild_permissions.administrator:
+        try:
+            # 판매 기록을 조회하여 인벤토리 복구에 필요한 정보 획득
+            sale_record = sales_collection.find_one({"_id": ObjectId(sale_id)})
+            if sale_record:
+                # 인벤토리 복구
+                items_sold = sale_record.get("items_sold", [])
+                for item, quantity in items_sold:
+                    current_quantity = inventory.get(item, 0)
+                    inventory[item] = current_quantity + quantity
+                save_inventory(inventory)
 
-            # 판매 기록 삭제
-            sales_collection.delete_one({"_id": ObjectId(sale_id)})
-            await interaction.response.send_message(f"판매 기록(ID: {sale_id})이 성공적으로 삭제되고, 인벤토리가 복구되었습니다.")
-        else:
-            await interaction.response.send_message(f"판매 기록(ID: {sale_id})을 찾을 수 없거나, 이 기록을 삭제할 권한이 없습니다.")
-    except Exception as e:
-        await interaction.response.send_message(f"오류가 발생했습니다: {str(e)}")
+                # 판매 기록 삭제
+                sales_collection.delete_one({"_id": ObjectId(sale_id)})
+                await interaction.response.send_message(f"판매 기록(ID: {sale_id})이 성공적으로 삭제되고, 인벤토리가 복구되었습니다.")
+            else:
+                await interaction.response.send_message(f"판매 기록(ID: {sale_id})을 찾을 수 없습니다.")
+        except Exception as e:
+            await interaction.response.send_message(f"오류가 발생했습니다: {str(e)}")
+    else:
+        await interaction.response.send_message("이 명령어를 사용할 권한이 없습니다.", ephemeral=True)
 
-# 슬래시 커맨드: 판매 내역 초기화 (정산)
+# 슬래시 커맨드: 판매 내역 초기화 (정산, 어드민 전용)
 @bot.tree.command(name='정산', description='판매 내역을 초기화합니다.')
 async def reset_sales(interaction: discord.Interaction):
     # 관리자 권한 확인 (예: 'ADMINISTRATOR' 권한이 있는 경우)
