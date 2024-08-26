@@ -331,18 +331,23 @@ async def buy_message(interaction: discord.Interaction):
 @bot.tree.command(name='판매', description='상품을 판매합니다.')
 @app_commands.describe(amount='판매 총액', buyer_name='구매자 이름', item_name1='첫 번째 아이템', quantity1='첫 번째 아이템 수량')
 @app_commands.autocomplete(item_name1=autocomplete_items, item_name2=autocomplete_items, item_name3=autocomplete_items, item_name4=autocomplete_items, item_name5=autocomplete_items)
-async def sell_item(interaction: discord.Interaction, amount: int, buyer_name: str, item_name1: str, quantity1: int, item_name2: str = None, quantity2: int = 0, item_name3: str = None, quantity3: int = 0, item_name4: str = None, quantity4: int = 0, item_name5: str = None, quantity5: int = 0):
-    items_sold = [(item_name1, quantity1)]
+async def sell_item(interaction: discord.Interaction, amount: int, buyer_name: str, item_name1: str = None, quantity1: int = 0, item_name2: str = None, quantity2: int = 0, item_name3: str = None, quantity3: int = 0, item_name4: str = None, quantity4: int = 0, item_name5: str = None, quantity5: int = 0):
+    items_sold = []
     
-    # 선택적 파라미터 추가
-    if item_name2:
+    if item_name1 and quantity1 > 0:
+        items_sold.append((item_name1, quantity1))
+    if item_name2 and quantity2 > 0:
         items_sold.append((item_name2, quantity2))
-    if item_name3:
+    if item_name3 and quantity3 > 0:
         items_sold.append((item_name3, quantity3))
-    if item_name4:
+    if item_name4 and quantity4 > 0:
         items_sold.append((item_name4, quantity4))
-    if item_name5:
+    if item_name5 and quantity5 > 0:
         items_sold.append((item_name5, quantity5))
+
+    if not items_sold:
+        await safe_send(interaction, "적어도 하나의 아이템과 수량을 입력해야 합니다.")
+        return
 
     # 재고 업데이트 및 판매 내역 기록
     for item, quantity in items_sold:
