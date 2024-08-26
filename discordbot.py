@@ -353,25 +353,25 @@ async def sell_item(interaction: discord.Interaction, amount: int, buyer_name: s
 
     await interaction.response.send_message(f"상품이 판매되었습니다! 판매 ID: {result.inserted_id}, 구매자: {buyer_name}, 총액: {amount}원")
 
-# 슬래시 커맨드: 판매 내역 확인 (임베드로 표시)
+# 슬래시 커맨드: 판매 내역 확인 (어드민 전용)
 @bot.tree.command(name='판매내역', description='판매 내역을 확인합니다.')
 async def show_sales(interaction: discord.Interaction):
-    sales_records = sales_collection.find().sort("timestamp", 1)
-    total_sales = 0
-    sales_embed = discord.Embed(title="버섯농장주인님의 판매 기록", color=discord.Color.blue())
+    # 어드민 권한 확인
+    if interaction.user.guild_permissions.administrator:
+        sales_records = sales_collection.find().sort("timestamp", 1)
+        total_sales = 0
+        sales_message = "버섯농장주인님의 판매 기록:\n\n"
 
-    for record in sales_records:
-        items_detail = ", ".join([f"{item} - {quantity}개" for item, quantity in record.get("items_sold", [])])
-        sales_embed.add_field(
-            name=f"구매자: {record.get('buyer_name', '알 수 없음')}, 판매 ID: {record['_id']}",
-            value=f"{items_detail}\n총액: {record.get('amount', '알 수 없음')}원",
-            inline=False
-        )
-        total_sales += record.get("amount", 0)
+        for record in sales_records:
+            items_detail = ", ".join([f"{item} - {quantity}개" for item, quantity in record.get("items_sold", [])])
+            sales_message += f"{items_detail} - {record.get('amount', '알 수 없음')}원 - 구매자: {record.get('buyer_name', '알 수 없음')} (판매 ID: {record['_id']})\n"
+            total_sales += record.get("amount", 0)
 
-    sales_embed.add_field(name="총 판매액", value=f"{total_sales}원", inline=False)
-    
-    await interaction.response.send_message(embed=sales_embed)
+        sales_message += f"\n총 판매액: {total_sales}원"
+
+        await interaction.response.send_message(sales_message)
+    else:
+        await interaction.response.send_message("이 명령어를 사용할 권한이 없습니다.", ephemeral=True)
 
 # 슬래시 커맨드: 특정 판매 기록 삭제 및 인벤토리 복구
 @bot.tree.command(name='판매삭제', description='특정 판매 기록을 삭제하고, 인벤토리를 복구합니다.')
