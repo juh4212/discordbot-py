@@ -7,13 +7,9 @@ import re
 import discord
 from discord.ext import commands
 from discord import app_commands
-from dotenv import load_dotenv
 import threading
 import time
 from decimal import Decimal, ROUND_HALF_UP
-
-# 환경 변수 로드
-load_dotenv()
 
 # MongoDB 연결 설정
 MONGODB_URI = os.getenv('MONGODB_URI')
@@ -423,6 +419,12 @@ def save_prices(prices):
     except Exception as e:
         print(f'Error saving prices: {e}')
 
-# 모든 기능 실행
+# 디스코드 토큰을 환경 변수에서 가져와 실행
 if __name__ == '__main__':
-    bot.run(os.getenv('DISCORD_TOKEN'))
+    discord_token = os.getenv('DISCORD_BOT_TOKEN')
+
+    # 토큰이 제대로 로드되었는지 확인
+    if discord_token is None:
+        print("DISCORD_BOT_TOKEN이 설정되지 않았습니다. 환경 변수를 확인하세요.")
+    else:
+        bot.run(discord_token)
