@@ -117,6 +117,16 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
+# 안전한 응답 함수: 상호작용이 이미 응답되었는지 확인
+async def safe_send(interaction, content):
+    try:
+        if not interaction.response.is_done():
+            await interaction.response.send_message(content)
+        else:
+            await interaction.followup.send(content)
+    except discord.errors.NotFound:
+        print("Interaction not found or already responded to.")
+
 async def fetch_prices_from_api():
     url = 'http://localhost:5000/creature_prices'
     response = requests.get(url)
@@ -164,9 +174,9 @@ async def add_item(interaction: discord.Interaction, item: str, quantity: int):
         else:
             inventory[item] = int(current_quantity) + quantity
         save_inventory(inventory)
-        await interaction.response.send_message(f'Item "{item}" added: {quantity} units.')
+        await safe_send(interaction, f'Item "{item}" added: {quantity} units.')
     else:
-        await interaction.response.send_message(f'Item "{item}" is not recognized.')
+        await safe_send(interaction, f'Item "{item}" is not recognized.')
 
 # 슬래시 커맨드: 아이템 제거
 @bot.tree.command(name='remove', description='Remove items from the inventory.')
@@ -178,11 +188,11 @@ async def remove_item(interaction: discord.Interaction, item: str, quantity: int
         if current_quantity != "N/A" and int(current_quantity) >= quantity:
             inventory[item] = int(current_quantity) - quantity
             save_inventory(inventory)
-            await interaction.response.send_message(f'Item "{item}" removed: {quantity} units.')
+            await safe_send(interaction, f'Item "{item}" removed: {quantity} units.')
         else:
-            await interaction.response.send_message(f'Not enough "{item}" in inventory.')
+            await safe_send(interaction, f'Not enough "{item}" in inventory.')
     else:
-        await interaction.response.send_message(f'Item "{item}" is not recognized.')
+        await safe_send(interaction, f'Item "{item}" is not recognized.')
 
 # 슬래시 커맨드: 시세 업데이트
 @bot.tree.command(name='price', description='Update the price of an item.')
@@ -194,9 +204,9 @@ async def update_price(interaction: discord.Interaction, item: str, shoom_price:
         prices[item]["슘 시세"] = shoom_price
         prices[item]["현금 시세"] = shoom_price * 0.7
         save_prices(prices)
-        await interaction.response.send_message(f'아이템 "{item}"의 시세가 슘 시세: {shoom_price}슘, 현금 시세: {shoom_price * 0.7}원으로 업데이트되었습니다.')
+        await safe_send(interaction, f'아이템 "{item}"의 시세가 슘 시세: {shoom_price}슘, 현금 시세: {shoom_price * 0.7}원으로 업데이트되었습니다.')
     else:
-        await interaction.response.send_message(f'아이템 "{item}"은(는) 사용할 수 없는 아이템입니다.')
+        await safe_send(interaction, f'아이템 "{item}"은(는) 사용할 수 없는 아이템입니다.')
 
 # 슬래시 커맨드: 현재 재고 확인
 @bot.tree.command(name='inventory', description='Show the current inventory with prices.')
@@ -230,7 +240,7 @@ async def show_inventory(interaction: discord.Interaction):
         embed3.add_field(name=item, value=f"재고: {quantity}개\n슘 시세: {shoom_price}슘\n현금 시세: {cash_price}원", inline=True)
 
     # 임베드 메시지를 디스코드에 전송
-    await interaction.response.send_message(embeds=[embed1, embed2, embed3])
+    await safe_send(interaction, embeds=[embed1, embed2, embed3])
 
 # 슬래시 커맨드: 할인 적용
 @bot.tree.command(name='discount', description='Apply a discount to all creatures.')
@@ -251,9 +261,9 @@ async def discount_creatures(interaction: discord.Interaction, discount_percenta
         for creature, price in discounted_prices.items():
             discount_message += f"• {creature.title()} - 할인된 시세: {price}원\n"
 
-        await interaction.response.send_message(discount_message)
+        await safe_send(interaction, discount_message)
     else:
-        await interaction.response.send_message("할인율은 0과 100 사이의 값이어야 합니다.")
+        await safe_send(interaction, "할인율은 0과 100 사이의 값이어야 합니다.")
 
 # 슬래시 커맨드: 판매 메시지 생성
 @bot.tree.command(name='sell_message', description='Generate the sell message.')
@@ -288,7 +298,7 @@ async def sell_message(interaction: discord.Interaction):
     # 필수 메시지 추가
     final_message = creatures_message + items_message + "\n• 문상 X  계좌 O\n• 구매를 원하시면 갠으로! \n• 재고 확인 후 갠오세요!"
 
-    await interaction.response.send_message(final_message)
+    await safe_send(interaction, final_message)
 
 # 슬래시 커맨드: 구매 메시지 생성
 @bot.tree.command(name='buy_message', description='Generate the buy message.')
@@ -313,7 +323,7 @@ async def buy_message(interaction: discord.Interaction):
     buy_message_content += "\n슘으로 구합니다\n정가 정도에 다 삽니다\n갠으로 제시 주세요"
 
     # 최종 메시지 전송
-    await interaction.response.send_message(buy_message_content)
+    await safe_send(interaction, buy_message_content)
 
 # 슬래시 커맨드: 판매 기록 저장 및 인벤토리 업데이트
 @bot.tree.command(name='판매', description='상품을 판매합니다.')
@@ -339,7 +349,7 @@ async def sell_item(interaction: discord.Interaction, amount: int, buyer_name: s
             inventory[item] -= quantity
             save_inventory(inventory)
         else:
-            await interaction.response.send_message(f"재고가 부족하여 {item}을(를) {quantity}개 판매할 수 없습니다.")
+            await safe_send(interaction, f"재고가 부족하여 {item}을(를) {quantity}개 판매할 수 없습니다.")
             return
 
     # 판매 내역을 MongoDB에 저장하고 ID를 반환
@@ -352,7 +362,7 @@ async def sell_item(interaction: discord.Interaction, amount: int, buyer_name: s
     }
     result = sales_collection.insert_one(sale_record)
 
-    await interaction.response.send_message(f"상품이 판매되었습니다! 판매 ID: {result.inserted_id}, 구매자: {buyer_name}, 총액: {amount}원")
+    await safe_send(interaction, f"상품이 판매되었습니다! 판매 ID: {result.inserted_id}, 구매자: {buyer_name}, 총액: {amount}원")
 
 # 슬래시 커맨드: 판매 내역 확인
 @bot.tree.command(name='판매내역', description='판매 내역을 확인합니다.')
@@ -368,7 +378,7 @@ async def show_sales(interaction: discord.Interaction):
 
     sales_message += f"\n총 판매액: {total_sales}원"
 
-    await interaction.response.send_message(sales_message)
+    await safe_send(interaction, sales_message)
 
 # 슬래시 커맨드: 특정 판매 기록 삭제 및 인벤토리 복구 (어드민 전용)
 @bot.tree.command(name='판매삭제', description='특정 판매 기록을 삭제하고, 인벤토리를 복구합니다.')
@@ -388,13 +398,13 @@ async def delete_sale(interaction: discord.Interaction, sale_id: str):
 
                 # 판매 기록 삭제
                 sales_collection.delete_one({"_id": ObjectId(sale_id)})
-                await interaction.response.send_message(f"판매 기록(ID: {sale_id})이 성공적으로 삭제되고, 인벤토리가 복구되었습니다.")
+                await safe_send(interaction, f"판매 기록(ID: {sale_id})이 성공적으로 삭제되고, 인벤토리가 복구되었습니다.")
             else:
-                await interaction.response.send_message(f"판매 기록(ID: {sale_id})을 찾을 수 없습니다.")
+                await safe_send(interaction, f"판매 기록(ID: {sale_id})을 찾을 수 없습니다.")
         except Exception as e:
-            await interaction.response.send_message(f"오류가 발생했습니다: {str(e)}")
+            await safe_send(interaction, f"오류가 발생했습니다: {str(e)}")
     else:
-        await interaction.response.send_message("이 명령어를 사용할 권한이 없습니다.", ephemeral=True)
+        await safe_send(interaction, "이 명령어를 사용할 권한이 없습니다.", ephemeral=True)
 
 # 슬래시 커맨드: 판매 내역 초기화 (정산, 어드민 전용)
 @bot.tree.command(name='정산', description='판매 내역을 초기화합니다.')
@@ -402,9 +412,9 @@ async def reset_sales(interaction: discord.Interaction):
     # 관리자 권한 확인 (예: 'ADMINISTRATOR' 권한이 있는 경우)
     if interaction.user.guild_permissions.administrator:
         sales_collection.delete_many({"user_id": interaction.user.id})
-        await interaction.response.send_message("판매 내역이 초기화되었습니다.")
+        await safe_send(interaction, "판매 내역이 초기화되었습니다.")
     else:
-        await interaction.response.send_message("이 명령어를 사용할 권한이 없습니다.", ephemeral=True)
+        await safe_send(interaction, "이 명령어를 사용할 권한이 없습니다.", ephemeral=True)
 
 # 슬래시 명령어를 추가하기 위해 bot에 명령어를 등록
 async def setup_slash_commands():
