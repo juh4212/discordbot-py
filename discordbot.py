@@ -204,9 +204,9 @@ async def update_price(interaction: discord.Interaction, item: str, shoom_price:
     global prices  # 전역 변수로 접근하여 업데이트
     if item in creatures + items:
         prices[item]["슘 시세"] = shoom_price
-        prices[item]["현금 시세"] = shoom_price * 0.5
+        prices[item]["현금 시세"] = shoom_price * 0.7
         save_prices(prices)
-        await safe_send(interaction, f'아이템 "{item}"의 시세가 슘 시세: {shoom_price}슘, 현금 시세: {shoom_price * 0.5}원으로 업데이트되었습니다.')
+        await safe_send(interaction, f'아이템 "{item}"의 시세가 슘 시세: {shoom_price}슘, 현금 시세: {shoom_price * 0.7}원으로 업데이트되었습니다.')
     else:
         await safe_send(interaction, f'아이템 "{item}"은(는) 사용할 수 없는 아이템입니다.')
 
